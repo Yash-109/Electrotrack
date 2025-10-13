@@ -1,32 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
+import { logger, ApiResponse } from '@/lib/api-utils'
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Cart save API called')
+    logger.info('Cart save API called')
     const body = await request.json()
-    console.log('Request body:', body)
+    logger.debug('Cart save request body', { userEmail: body.userEmail, itemCount: body.items?.length })
     const { userEmail, items, totalAmount } = body
 
     if (!userEmail) {
-      console.log('No userEmail provided')
+      logger.warn('Cart save attempted without userEmail')
       return NextResponse.json(
         { error: 'User email is required' },
         { status: 400 }
       )
     }
 
-    console.log('Getting database connection')
+    logger.debug('Getting database connection for cart save')
     const db = await getDb('electrotrack')
-    console.log('Database connected, getting carts collection')
+    logger.debug('Database connected, accessing carts collection')
     const cartsCollection = db.collection('carts')
 
-    console.log('Performing upsert operation for user:', userEmail)
+    logger.debug('Performing cart upsert operation', { userEmail })
     // Use replaceOne with upsert to handle database conflicts properly
     // This will completely replace the document, avoiding index conflicts
     try {
       const result = await cartsCollection.replaceOne(
-        { 
+        {
           $or: [
             { userEmail: userEmail },
             { userId: userEmail }
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
         { upsert: true }
       )
 
-      console.log('Cart save result:', result)
+      logger.info('Cart saved successfully', { userEmail, upserted: !!result.upsertedId })
       return NextResponse.json({
         success: true,
         message: 'Cart saved successfully',
@@ -52,8 +53,8 @@ export async function POST(request: NextRequest) {
     } catch (err: any) {
       // Handle duplicate-key specifically to provide a clearer message
       if (err && err.code === 11000) {
-        console.error('Duplicate key error while saving cart. Attempting to delete and recreate:', err)
-        
+        logger.warn('Duplicate key error while saving cart, attempting recovery', { userEmail })
+
         // Try to delete existing cart and create new one
         try {
           await cartsCollection.deleteMany({
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
               { userId: userEmail }
             ]
           })
-          
+
           const insertResult = await cartsCollection.insertOne({
             userEmail,
             userId: userEmail,
@@ -71,18 +72,17 @@ export async function POST(request: NextRequest) {
             updatedAt: new Date(),
             createdAt: new Date()
           })
-          
-          console.log('Cart recreated successfully:', insertResult)
+
+          logger.info('Cart recreated successfully after conflict', { userEmail })
           return NextResponse.json({
             success: true,
-            message: 'Cart saved successfully (recreated)',
+            message: 'Cart saved successfully',
             cartId: insertResult.insertedId
           })
         } catch (secondError) {
-          console.error('Failed to recreate cart:', secondError)
+          logger.error('Failed to recreate cart after conflict', secondError)
           return NextResponse.json({
-            error: 'Cart save failed due to database conflict',
-            details: secondError
+            error: 'Cart save failed due to database conflict'
           }, { status: 500 })
         }
       }
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error saving cart:', error)
+    logger.error('Error saving cart', error)
     return NextResponse.json(
       { error: 'Failed to save cart' },
       { status: 500 }

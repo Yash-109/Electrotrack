@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { ObjectId } from 'mongodb'
+import { requireAdminRole } from '@/lib/admin-middleware'
 
 // Get analytics data
-export async function GET(request: NextRequest) {
+export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
   try {
     const url = new URL(request.url)
     const period = url.searchParams.get('period') || 'monthly' // daily, weekly, monthly, yearly
-    
+
     const db = await getDb()
     const orders = db.collection('orders')
     const expenses = db.collection('expenses')
     const analytics = db.collection('analytics')
-    
+
     // Calculate revenue from orders
     const revenueData = await orders.aggregate([
       {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
         }
       }
     ]).toArray()
-    
+
     // Calculate total expenses
     const expenseData = await expenses.aggregate([
       {
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
         }
       }
     ]).toArray()
-    
+
     // Get monthly revenue trends
     const monthlyRevenue = await orders.aggregate([
       {
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
         $sort: { '_id.year': 1, '_id.month': 1 }
       }
     ]).toArray()
-    
+
     // Get monthly expenses trends
     const monthlyExpenses = await expenses.aggregate([
       {
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         $sort: { '_id.year': 1, '_id.month': 1 }
       }
     ]).toArray()
-    
+
     // Get category-wise expenses
     const categoryExpenses = await expenses.aggregate([
       {
@@ -91,17 +92,17 @@ export async function GET(request: NextRequest) {
         $sort: { amount: -1 }
       }
     ]).toArray()
-    
+
     // Calculate totals
     const totalRevenue = revenueData[0]?.totalRevenue || 0
     const totalExpenses = expenseData[0]?.totalExpenses || 0
     const netProfit = totalRevenue - totalExpenses
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
-    
+
     // Format monthly data for charts
     const monthlyData = []
     const monthMap = new Map()
-    
+
     // Add revenue data
     monthlyRevenue.forEach(item => {
       const key = `${item._id.year}-${item._id.month.toString().padStart(2, '0')}`
@@ -112,7 +113,7 @@ export async function GET(request: NextRequest) {
         profit: item.revenue
       })
     })
-    
+
     // Add expense data
     monthlyExpenses.forEach(item => {
       const key = `${item._id.year}-${item._id.month.toString().padStart(2, '0')}`
@@ -129,12 +130,12 @@ export async function GET(request: NextRequest) {
         })
       }
     })
-    
+
     // Convert map to array and sort
     const chartData = Array.from(monthMap.values()).sort((a, b) => {
       return new Date(a.month).getTime() - new Date(b.month).getTime()
     })
-    
+
     return NextResponse.json({
       success: true,
       analytics: {
@@ -154,34 +155,34 @@ export async function GET(request: NextRequest) {
         }))
       }
     })
-    
+
   } catch (error: any) {
     console.error('Analytics fetch error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 // Add expense or revenue entry
-export async function POST(request: NextRequest) {
+export const POST = requireAdminRole('admin')(async (request: NextRequest) => {
   try {
     const body = await request.json()
     const { type, description, amount, category, notes, date } = body
-    
+
     if (!type || !description || !amount || !category) {
-      return NextResponse.json({ 
-        error: 'Type, description, amount, and category are required' 
+      return NextResponse.json({
+        error: 'Type, description, amount, and category are required'
       }, { status: 400 })
     }
-    
+
     if (type !== 'income' && type !== 'expense') {
-      return NextResponse.json({ 
-        error: 'Type must be either "income" or "expense"' 
+      return NextResponse.json({
+        error: 'Type must be either "income" or "expense"'
       }, { status: 400 })
     }
-    
+
     const db = await getDb()
     const collection = type === 'expense' ? db.collection('expenses') : db.collection('revenue')
-    
+
     const entry = {
       _id: new ObjectId(),
       description,
@@ -193,84 +194,84 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
       updatedAt: new Date()
     }
-    
+
     await collection.insertOne(entry)
-    
+
     return NextResponse.json({
       success: true,
       message: `${type} entry added successfully`,
       entry
     })
-    
+
   } catch (error: any) {
     console.error('Analytics add error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 // Update expense or revenue entry
-export async function PUT(request: NextRequest) {
+export const PUT = requireAdminRole('admin')(async (request: NextRequest) => {
   try {
     const body = await request.json()
     const { id, type, description, amount, category, notes, date } = body
-    
+
     if (!id || !type) {
-      return NextResponse.json({ 
-        error: 'ID and type are required' 
+      return NextResponse.json({
+        error: 'ID and type are required'
       }, { status: 400 })
     }
-    
+
     const db = await getDb()
     const collection = type === 'expense' ? db.collection('expenses') : db.collection('revenue')
-    
+
     const updateData: any = { updatedAt: new Date() }
     if (description) updateData.description = description
     if (amount) updateData.amount = parseFloat(amount)
     if (category) updateData.category = category
     if (notes !== undefined) updateData.notes = notes
     if (date) updateData.date = new Date(date)
-    
+
     await collection.updateOne(
       { _id: new ObjectId(id) },
       { $set: updateData }
     )
-    
+
     return NextResponse.json({
       success: true,
       message: `${type} entry updated successfully`
     })
-    
+
   } catch (error: any) {
     console.error('Analytics update error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 // Delete expense or revenue entry
-export async function DELETE(request: NextRequest) {
+export const DELETE = requireAdminRole('super_admin')(async (request: NextRequest) => {
   try {
     const url = new URL(request.url)
     const id = url.searchParams.get('id')
     const type = url.searchParams.get('type')
-    
+
     if (!id || !type) {
-      return NextResponse.json({ 
-        error: 'ID and type are required' 
+      return NextResponse.json({
+        error: 'ID and type are required'
       }, { status: 400 })
     }
-    
+
     const db = await getDb()
     const collection = type === 'expense' ? db.collection('expenses') : db.collection('revenue')
-    
+
     await collection.deleteOne({ _id: new ObjectId(id) })
-    
+
     return NextResponse.json({
       success: true,
       message: `${type} entry deleted successfully`
     })
-    
+
   } catch (error: any) {
     console.error('Analytics delete error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

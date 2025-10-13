@@ -1,7 +1,9 @@
+import bcryptjs from 'bcryptjs'
+
 interface AdminUser {
   id: string
   username: string
-  password: string
+  passwordHash: string
   name: string
   role: "super_admin" | "admin"
   email: string
@@ -10,7 +12,7 @@ interface AdminUser {
 
 interface AuthResult {
   success: boolean
-  user?: AdminUser
+  user?: Omit<AdminUser, 'passwordHash'>
   error?: string
 }
 
@@ -18,35 +20,52 @@ class AdminAuthService {
   private readonly STORAGE_KEY = "radhika_admin_session"
   private readonly SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 
-  private adminUsers: AdminUser[] = [
-    {
-      id: "1",
-      username: "admin",
-      password: "radhika2024",
-      name: "Jayeshbhai Savaliya",
-      role: "super_admin",
-      email: "jayeshsavaliya3011@gmail.com",
-    },
-    {
-      id: "2",
-      username: "jayesh",
-      password: "jayesh123",
-      name: "Jayeshbhai Savaliya",
-      role: "admin",
-      email: "jayeshsavaliya3011@gmail.com",
-    },
-    {
-      id: "3",
-      username: "radhika",
-      password: "electronics2024",
-      name: "Radhika Electronics Admin",
-      role: "admin",
-      email: "admin@radhikaelectronics.com",
-    },
-  ]
+  private getAdminUsers(): AdminUser[] {
+    // Use environment variables for admin credentials
+    const adminUsers: AdminUser[] = []
 
-  login(username: string, password: string): AuthResult {
-    const user = this.adminUsers.find((u) => u.username === username && u.password === password)
+    // Admin 1 - Super Admin
+    if (process.env.ADMIN_USERNAME_1 && process.env.ADMIN_PASSWORD_1) {
+      adminUsers.push({
+        id: "1",
+        username: process.env.ADMIN_USERNAME_1,
+        passwordHash: process.env.ADMIN_PASSWORD_1, // Should be bcrypt hash
+        name: process.env.ADMIN_NAME_1 || "Super Admin",
+        role: "super_admin",
+        email: process.env.ADMIN_EMAIL_1 || "admin@radhikaelectronics.com",
+      })
+    }
+
+    // Admin 2 - Regular Admin
+    if (process.env.ADMIN_USERNAME_2 && process.env.ADMIN_PASSWORD_2) {
+      adminUsers.push({
+        id: "2",
+        username: process.env.ADMIN_USERNAME_2,
+        passwordHash: process.env.ADMIN_PASSWORD_2, // Should be bcrypt hash
+        name: process.env.ADMIN_NAME_2 || "Admin",
+        role: "admin",
+        email: process.env.ADMIN_EMAIL_2 || "admin@radhikaelectronics.com",
+      })
+    }
+
+    // Fallback admin (only in development)
+    if (process.env.NODE_ENV === 'development' && adminUsers.length === 0) {
+      adminUsers.push({
+        id: "dev",
+        username: "admin",
+        passwordHash: bcryptjs.hashSync("admin123", 10), // Default dev password
+        name: "Development Admin",
+        role: "super_admin",
+        email: "dev@localhost",
+      })
+    }
+
+    return adminUsers
+  }
+
+  async login(username: string, password: string): Promise<AuthResult> {
+    const adminUsers = this.getAdminUsers()
+    const user = adminUsers.find((u) => u.username === username)
 
     if (!user) {
       return {
@@ -55,9 +74,20 @@ class AdminAuthService {
       }
     }
 
-    // Create session
+    // Compare password with hash
+    const isValidPassword = await bcryptjs.compare(password, user.passwordHash)
+
+    if (!isValidPassword) {
+      return {
+        success: false,
+        error: "Invalid username or password",
+      }
+    }
+
+    // Create session (exclude password hash)
+    const { passwordHash, ...userWithoutPassword } = user
     const session = {
-      user: { ...user, password: undefined }, // Don't store password in session
+      user: userWithoutPassword,
       loginTime: new Date().toISOString(),
       expiresAt: new Date(Date.now() + this.SESSION_DURATION).toISOString(),
     }
@@ -69,7 +99,7 @@ class AdminAuthService {
 
     return {
       success: true,
-      user,
+      user: userWithoutPassword,
     }
   }
 
@@ -127,11 +157,12 @@ class AdminAuthService {
   }
 
   getAdminCredentials() {
-    return this.adminUsers.map((user) => ({
+    const adminUsers = this.getAdminUsers()
+    return adminUsers.map((user) => ({
       username: user.username,
-      password: user.password,
       name: user.name,
       role: user.role,
+      email: user.email,
     }))
   }
 }

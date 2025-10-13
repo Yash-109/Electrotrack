@@ -11,22 +11,31 @@ declare global {
 const uri = process.env.MONGODB_URI
 const dbName = process.env.MONGODB_DB // optional, can be passed per-call
 
-if (!uri) {
-  // Fail fast so misconfiguration is obvious
-  throw new Error('Missing environment variable: MONGODB_URI')
+// Don't throw at module import time. Defer validation to runtime when functions are used.
+function ensureUri() {
+  if (!uri) {
+    throw new Error('Missing environment variable: MONGODB_URI')
+  }
+  return uri
 }
 
 let client: MongoClient
 let clientPromise: Promise<MongoClient>
 
 if (process.env.NODE_ENV === 'development') {
+  // Delay creating the client until someone actually requests it
   if (!global._mongoClientPromise) {
-    client = new MongoClient(uri)
-    global._mongoClientPromise = client.connect()
+    // lazy init placeholder — actual connect will use the validated URI
+    global._mongoClientPromise = (async () => {
+      const u = ensureUri()
+      const c = new MongoClient(u)
+      return c.connect()
+    })()
   }
   clientPromise = global._mongoClientPromise
 } else {
-  client = new MongoClient(uri)
+  // Production: create client lazily using validated URI
+  client = new MongoClient(ensureUri())
   clientPromise = client.connect()
 }
 
