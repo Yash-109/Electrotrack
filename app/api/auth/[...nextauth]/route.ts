@@ -6,7 +6,7 @@ import { getMongoClient } from "@/lib/mongodb"
 
 const clientPromise = getMongoClient()
 
-export const authOptions: AuthOptions = {
+const authOptions: any = {
   adapter: MongoDBAdapter(clientPromise),
   providers: [
     GoogleProvider({
@@ -15,14 +15,14 @@ export const authOptions: AuthOptions = {
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
+    async session({ session, user }: { session: any; user: any }) {
       // Add custom session data if needed
       if (session?.user) {
         (session.user as any).id = user.id
       }
       return session
     },
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: { user: any; account: any; profile: any }) {
       // You can add custom logic here for user validation
       // For now, allow all Google sign-ins
       return true

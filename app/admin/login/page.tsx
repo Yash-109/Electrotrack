@@ -45,8 +45,8 @@ export default function AdminLoginPage() {
     }
 
     // Simulate loading delay
-    setTimeout(() => {
-      const result = adminAuth.login(formData.username, formData.password)
+    setTimeout(async () => {
+      const result = await adminAuth.login(formData.username, formData.password)
 
       if (result.success) {
         toast({
@@ -182,8 +182,8 @@ export default function AdminLoginPage() {
                           <div className="font-mono bg-white p-1 rounded border">{cred.username}</div>
                         </div>
                         <div>
-                          <span className="text-gray-600">Password:</span>
-                          <div className="font-mono bg-white p-1 rounded border">{cred.password}</div>
+                          <span className="text-gray-600">Role:</span>
+                          <div className="font-mono bg-white p-1 rounded border">{cred.role}</div>
                         </div>
                       </div>
                       <Button

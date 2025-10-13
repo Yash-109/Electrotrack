@@ -104,7 +104,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
     const monthMap = new Map()
 
     // Add revenue data
-    monthlyRevenue.forEach(item => {
+    monthlyRevenue.forEach((item: any) => {
       const key = `${item._id.year}-${item._id.month.toString().padStart(2, '0')}`
       monthMap.set(key, {
         month: new Date(item._id.year, item._id.month - 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
@@ -115,7 +115,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
     })
 
     // Add expense data
-    monthlyExpenses.forEach(item => {
+    monthlyExpenses.forEach((item: any) => {
       const key = `${item._id.year}-${item._id.month.toString().padStart(2, '0')}`
       if (monthMap.has(key)) {
         const existing = monthMap.get(key)
@@ -148,7 +148,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
           avgOrderValue: parseFloat((revenueData[0]?.avgOrderValue || 0).toFixed(2))
         },
         chartData,
-        categoryData: categoryExpenses.map(cat => ({
+        categoryData: categoryExpenses.map((cat: any) => ({
           name: cat._id,
           value: cat.amount,
           count: cat.count

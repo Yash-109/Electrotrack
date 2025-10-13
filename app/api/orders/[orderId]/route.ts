@@ -3,10 +3,10 @@ import { getDb } from '@/lib/mongodb'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const { orderId } = params
+    const { orderId } = await params
 
     if (!orderId) {
       return NextResponse.json({
@@ -17,10 +17,10 @@ export async function GET(
 
     const db = await getDb()
     const orders = db.collection('orders')
-    
+
     // Find the order by orderId
     const order = await orders.findOne({ orderId })
-    
+
     if (!order) {
       return NextResponse.json({
         success: false,
