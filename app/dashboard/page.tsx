@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ShoppingCart, Star, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { userAuth } from "@/lib/user-auth" 
+import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
 import { useRouter } from "next/navigation"
 
@@ -92,21 +92,9 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("name")
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      const loggedIn = userAuth.isLoggedIn()
-      const user = userAuth.getCurrentUser()
-      setIsLoggedIn(loggedIn)
-      setCurrentUser(user)
-    }
-
-    checkAuthStatus()
-  }, [])
 
   const categories = [
     { value: "all", label: "All Products" },
@@ -160,15 +148,15 @@ export default function DashboardPage() {
     try {
       // Get current cart
       const currentCart = await CartService.getCart(currentUser.email)
-      
+
       // Check if item already exists in cart
       const existingItemIndex = currentCart.findIndex(item => item.id === product.id.toString())
-      
+
       let updatedCart: CartItem[]
       if (existingItemIndex >= 0) {
         // Update quantity of existing item
-        updatedCart = currentCart.map((item, index) => 
-          index === existingItemIndex 
+        updatedCart = currentCart.map((item, index) =>
+          index === existingItemIndex
             ? { ...item, quantity: item.quantity + 1 }
             : item
         )
@@ -195,7 +183,7 @@ export default function DashboardPage() {
           title: "Added to cart!",
           description: `${product.name} has been added to your cart.`,
         })
-        
+
         // Trigger header refresh by dispatching a custom event
         window.dispatchEvent(new CustomEvent('cartUpdated'))
       } else {
@@ -213,6 +201,21 @@ export default function DashboardPage() {
         variant: "destructive",
       })
     }
+  }
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
