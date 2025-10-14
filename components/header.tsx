@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -15,28 +15,27 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ShoppingCart, User, LogOut, Package, Settings, Menu, X, UserCircle } from "lucide-react"
-import { userAuth } from "@/lib/user-auth"
+import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { CartService } from "@/lib/cart-service"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
   const [cartItemCount, setCartItemCount] = useState(0)
   const [isLoadingCart, setIsLoadingCart] = useState(false)
+  const { user: currentUser, isAuthenticated: isLoggedIn, logout } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
-  const fetchCartCount = async (userEmail: string) => {
+  const fetchCartCount = useCallback(async (userEmail: string) => {
     if (isLoadingCart) return // Prevent multiple simultaneous requests
-    
+
     console.log('fetchCartCount called for user:', userEmail)
     setIsLoadingCart(true)
     try {
       const cartItems = await CartService.getCart(userEmail)
       console.log('Retrieved cart items:', cartItems)
-      
+
       if (cartItems && Array.isArray(cartItems)) {
         const totalItems = cartItems.reduce((total: number, item: any) => total + (item.quantity || 0), 0)
         console.log('Total cart items:', totalItems)
@@ -51,66 +50,37 @@ export function Header() {
     } finally {
       setIsLoadingCart(false)
     }
-  }
+  }, [isLoadingCart])
 
-  // Separate effect for initial auth check
-  useEffect(() => {
-    const checkAuthStatus = () => {
-      const loggedIn = userAuth.isLoggedIn()
-      const user = userAuth.getCurrentUser()
-      setIsLoggedIn(loggedIn)
-      setCurrentUser(user)
-      
-      // Fetch cart count if user is logged in
-      if (loggedIn && user) {
-        fetchCartCount(user.email)
-      } else {
-        setCartItemCount(0)
-      }
-    }
+  // TODO: Fix infinite loop issue with cart fetching
+  // Temporarily disabled to fix performance issue
+  // useEffect(() => {
+  //   if (isLoggedIn && currentUser?.email) {
+  //     fetchCartCount(currentUser.email)
+  //   } else {
+  //     setCartItemCount(0)
+  //   }
+  // }, [isLoggedIn, currentUser?.email, fetchCartCount])
 
-    checkAuthStatus()
-  }, []) // Only run once on mount
+  // useEffect(() => {
+  //   const handleCartUpdate = () => {
+  //     console.log('cartUpdated event received in header')
+  //     if (currentUser?.email) {
+  //       console.log('Fetching cart count for user:', currentUser.email)
+  //       fetchCartCount(currentUser.email)
+  //     }
+  //   }
 
-  // Separate effect for event listeners
-  useEffect(() => {
-    // Listen for storage changes to update auth status
-    const handleStorageChange = () => {
-      const loggedIn = userAuth.isLoggedIn()
-      const user = userAuth.getCurrentUser()
-      setIsLoggedIn(loggedIn)
-      setCurrentUser(user)
-      
-      if (loggedIn && user) {
-        fetchCartCount(user.email)
-      } else {
-        setCartItemCount(0)
-      }
-    }
+  //   window.addEventListener("cartUpdated", handleCartUpdate)
 
-    // Listen for cart updates
-    const handleCartUpdate = () => {
-      console.log('cartUpdated event received in header')
-      const user = userAuth.getCurrentUser()
-      if (user && user.email) {
-        console.log('Fetching cart count for user:', user.email)
-        fetchCartCount(user.email)
-      }
-    }
+  //   return () => {
+  //     window.removeEventListener("cartUpdated", handleCartUpdate)
+  //   }
+  // }, [currentUser, fetchCartCount])
 
-    window.addEventListener("storage", handleStorageChange)
-    window.addEventListener("cartUpdated", handleCartUpdate)
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange)
-      window.removeEventListener("cartUpdated", handleCartUpdate)
-    }
-  }, []) // Only run once on mount
-
-  const handleLogout = () => {
-    userAuth.logout()
-    setIsLoggedIn(false)
-    setCurrentUser(null)
+  const handleLogout = async () => {
+    await logout()
+    setCartItemCount(0)
     toast({
       title: "Logged out successfully",
       description: "You have been logged out of your account.",
