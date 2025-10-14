@@ -134,7 +134,7 @@ export default function LoginPage() {
 
         // Restore cart after login (optional - cart will be loaded when user visits cart page)
         // This ensures cart persistence across sessions
-        
+
         toast({
           title: "Login successful!",
           description: "Welcome back to Radhika Electronics.",
@@ -163,7 +163,7 @@ export default function LoginPage() {
 
   const handleResendVerification = async () => {
     setEmailVerificationState(prev => ({ ...prev, isResending: true }))
-    
+
     try {
       const response = await fetch('/api/auth/resend-verification', {
         method: 'POST',
@@ -174,7 +174,7 @@ export default function LoginPage() {
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
         toast({
           title: "Verification email sent! 📧",
@@ -206,8 +206,8 @@ export default function LoginPage() {
     setIsAdminLoading(true)
 
     // Simulate loading delay
-    setTimeout(() => {
-      const result = adminAuth.login(adminFormData.username, adminFormData.password)
+    setTimeout(async () => {
+      const result = await adminAuth.login(adminFormData.username, adminFormData.password)
 
       if (result.success) {
         toast({
@@ -228,16 +228,16 @@ export default function LoginPage() {
 
     try {
       const result = await googleAuth.signInWithGoogle()
-      
+
       if (result.success && result.user) {
         toast({
           title: "Google login successful!",
           description: `Welcome ${result.user.name}! Redirecting to dashboard...`,
         })
-        
+
         // Cart will be automatically restored when user visits cart page
         // due to the cart persistence implementation
-        
+
         // Redirect to dashboard after successful login
         setTimeout(() => {
           router.push("/dashboard")
@@ -272,11 +272,6 @@ export default function LoginPage() {
     if (adminErrors[field]) {
       setAdminErrors((prev) => ({ ...prev, [field]: "" }))
     }
-  }
-
-  const fillAdminCredentials = (username: string, password: string) => {
-    setAdminFormData({ username, password })
-    setAdminErrors({})
   }
 
   const adminCredentials = adminAuth.getAdminCredentials()
@@ -348,7 +343,7 @@ export default function LoginPage() {
                         </AlertDescription>
                       </Alert>
                     )}
-                    
+
                     <div>
                       <Label htmlFor="user-email">Gmail Address</Label>
                       <div className="relative">
@@ -364,7 +359,7 @@ export default function LoginPage() {
                         />
                       </div>
                       {userErrors.email && <p className="text-red-500 text-sm mt-1">{userErrors.email}</p>}
-                      
+
                       {/* Email verification notice */}
                       <div className="text-xs text-gray-600 bg-blue-50 p-2 rounded mt-2">
                         <Info className="inline h-3 w-3 mr-1" />
@@ -403,9 +398,9 @@ export default function LoginPage() {
                       </Link>
                     </div>
 
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
+                    <Button
+                      type="submit"
+                      className="w-full"
                       disabled={isUserLoading}
                     >
                       {isUserLoading ? "Logging in..." : "Login as Customer"}
@@ -424,11 +419,11 @@ export default function LoginPage() {
                       </p>
                       <div className="space-y-2">
                         <p className="text-yellow-700 text-xs">
-                          • Check your Gmail inbox for the verification email<br/>
-                          • If the Gmail address doesn't exist, you won't receive any email<br/>
+                          • Check your Gmail inbox for the verification email<br />
+                          • If the Gmail address doesn't exist, you won't receive any email<br />
                           • Click the verification link to activate your account
                         </p>
-                        <Button 
+                        <Button
                           onClick={handleResendVerification}
                           disabled={emailVerificationState.isResending}
                           variant="outline"
@@ -565,34 +560,22 @@ export default function LoginPage() {
 
                       {showAdminCredentials && (
                         <div className="space-y-2 text-sm">
-                          {adminCredentials.map((cred, index) => (
-                            <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="font-semibold text-red-600">{cred.name}</span>
-                                <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
-                                  {cred.role === "super_admin" ? "Super Admin" : "Admin"}
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div>
-                                  <span className="text-gray-600">Username:</span>
-                                  <div className="font-mono bg-white p-1 rounded border">{cred.username}</div>
-                                </div>
-                                <div>
-                                  <span className="text-gray-600">Password:</span>
-                                  <div className="font-mono bg-white p-1 rounded border">{cred.password}</div>
-                                </div>
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full mt-2 bg-transparent"
-                                onClick={() => fillAdminCredentials(cred.username, cred.password)}
-                              >
-                                Use These Credentials
-                              </Button>
+                          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div className="flex items-center mb-2">
+                              <span className="text-red-600 font-semibold">🔒 Admin Security Notice</span>
                             </div>
-                          ))}
+                            <p className="text-red-800 text-sm mb-3">
+                              Admin credentials are now stored securely in environment variables.
+                            </p>
+                            <div className="bg-gray-100 p-3 rounded border text-xs font-mono">
+                              <p className="mb-1"># Configure in .env.local:</p>
+                              <p className="mb-1">ADMIN_USERNAME_1=admin</p>
+                              <p className="mb-1">ADMIN_PASSWORD_1=$2b$10$your.hash</p>
+                              <p className="mt-2 text-red-600">
+                                📖 See SECURITY-FIXES-GUIDE.md for details
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </CardContent>

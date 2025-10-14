@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
+import { getDb, getMongoClient } from '@/lib/mongodb'
 
 export async function POST(request: NextRequest) {
   try {
     const db = await getDb()
-    
+
     // Clear existing collections (except users and carts)
     const collectionsToKeep = ['users', 'carts']
-    const allCollections = await db.listCollections().toArray()
-    
-    for (const collection of allCollections) {
+    const existingCollections = await (db as any).listCollections({}).toArray()
+
+    for (const collection of existingCollections) {
       if (!collectionsToKeep.includes(collection.name)) {
         await db.collection(collection.name).deleteMany({})
       }
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       {
         name: "Samsung Galaxy S24 Ultra",
         category: "smartphones",
-        brand: "Samsung", 
+        brand: "Samsung",
         price: 89999,
         originalPrice: 99999,
         discount: 10,
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
           display: "6.7 inch Super Retina XDR",
           processor: "A17 Pro chip",
           ram: "8GB",
-          storage: "256GB", 
+          storage: "256GB",
           camera: "48MP Main + 12MP Ultra Wide + 12MP Telephoto",
           battery: "4441mAh"
         },
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
       },
       {
         _id: "order_2",
-        orderNumber: "ORD-2024-002", 
+        orderNumber: "ORD-2024-002",
         customerId: "user_456",
         customerEmail: "sarah.smith@email.com",
         customerName: "Sarah Smith",
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
         _id: "order_3",
         orderNumber: "ORD-2024-003",
         customerId: "user_789",
-        customerEmail: "mike.johnson@email.com", 
+        customerEmail: "mike.johnson@email.com",
         customerName: "Mike Johnson",
         items: [
           {
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
         shippingAddress: {
           street: "789 Pine Road",
           city: "Bangalore",
-          state: "Karnataka", 
+          state: "Karnataka",
           zipCode: "560001",
           country: "India"
         },
@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
         orderNumber: "ORD-2024-004",
         customerId: "user_101",
         customerEmail: "priya.patel@email.com",
-        customerName: "Priya Patel", 
+        customerName: "Priya Patel",
         items: [
           {
             productId: "prod_2",
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
           street: "321 Garden Street",
           city: "Pune",
           state: "Maharashtra",
-          zipCode: "411001", 
+          zipCode: "411001",
           country: "India"
         },
         orderDate: new Date("2024-07-25"),
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
         items: [
           {
             productId: "prod_5",
-            productName: "Samsung 55 4K Smart TV", 
+            productName: "Samsung 55 4K Smart TV",
             quantity: 1,
             price: 45999,
             total: 45999
@@ -410,7 +410,7 @@ export async function POST(request: NextRequest) {
       },
       {
         _id: "cat_2",
-        name: "laptops", 
+        name: "laptops",
         displayName: "Laptops",
         description: "High-performance laptops for work and gaming",
         image: "/placeholder.jpg",
@@ -512,7 +512,7 @@ export async function POST(request: NextRequest) {
             addedAt: new Date("2024-08-01")
           },
           {
-            productId: "prod_6", 
+            productId: "prod_6",
             addedAt: new Date("2024-08-03")
           }
         ],
@@ -574,7 +574,7 @@ export async function POST(request: NextRequest) {
         orderId: "order_2",
         transactionId: "razorpay_XYZ456",
         amount: 129890,
-        currency: "INR", 
+        currency: "INR",
         status: "captured",
         gateway: "razorpay",
         method: "upi",
@@ -586,10 +586,10 @@ export async function POST(request: NextRequest) {
     await db.collection('payment_logs').insertMany(paymentLogs as any)
 
     // Get collection counts
-    const collections = await db.listCollections().toArray()
+    const collectionsList = await (db as any).listCollections({}).toArray()
     const counts: Record<string, number> = {}
-    
-    for (const collection of collections) {
+
+    for (const collection of collectionsList) {
       counts[collection.name] = await db.collection(collection.name).countDocuments()
     }
 
@@ -606,7 +606,7 @@ export async function POST(request: NextRequest) {
         inventory: inventory.length,
         payment_logs: paymentLogs.length
       },
-      totalCollections: collections.length,
+      totalCollections: collectionsList.length,
       allCollections: counts,
       summary: {
         totalRevenue: orders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + o.totalAmount, 0),
@@ -619,8 +619,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating database collections:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to create database collections',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

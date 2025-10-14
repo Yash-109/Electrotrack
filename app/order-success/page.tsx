@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Header } from "@/components/header"
@@ -11,18 +11,18 @@ import { CheckCircle, Package, Truck, Home, CreditCard, Calendar, User, MapPin }
 import { userAuth } from "@/lib/user-auth"
 import { CartService } from "@/lib/cart-service"
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const [orderData, setOrderData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const searchParams = useSearchParams()
-  
+
   useEffect(() => {
     const initializeOrderSuccess = async () => {
       try {
         // Check for URL parameters (from enhanced payment system)
         const orderId = searchParams.get('orderId')
         const paymentId = searchParams.get('paymentId')
-        
+
         if (orderId && paymentId) {
           // Fetch order details from backend
           const response = await fetch(`/api/orders/${orderId}`)
@@ -49,7 +49,7 @@ export default function OrderSuccessPage() {
             setOrderData(JSON.parse(storedOrderData))
           }
         }
-        
+
         // Clear the cart after successful order
         const user = userAuth.getCurrentUser()
         if (user) {
@@ -60,18 +60,18 @@ export default function OrderSuccessPage() {
             console.error('Failed to clear cart after order:', error)
           }
         }
-        
+
         // Clear checkout cart from localStorage
         localStorage.removeItem("radhika_checkout_cart")
         localStorage.removeItem("radhika_current_order")
-        
+
       } catch (error) {
         console.error('Error loading order details:', error)
       } finally {
         setLoading(false)
       }
     }
-    
+
     initializeOrderSuccess()
   }, [searchParams])
 
@@ -141,8 +141,8 @@ export default function OrderSuccessPage() {
                 <div>
                   <p className="text-sm text-gray-600">Order Date</p>
                   <p className="font-semibold">
-                    {orderData.createdAt 
-                      ? new Date(orderData.createdAt).toLocaleDateString() 
+                    {orderData.createdAt
+                      ? new Date(orderData.createdAt).toLocaleDateString()
                       : new Date(orderData.orderDate || Date.now()).toLocaleDateString()
                     }
                   </p>
@@ -152,24 +152,24 @@ export default function OrderSuccessPage() {
                   <div className="flex items-center space-x-2">
                     <CreditCard className="h-4 w-4" />
                     <p className="font-semibold capitalize">
-                      {orderData.paymentMethod === "cod" 
-                        ? "Cash on Delivery" 
+                      {orderData.paymentMethod === "cod"
+                        ? "Cash on Delivery"
                         : orderData.paymentMethod === "card"
-                        ? "Credit/Debit Card"
-                        : orderData.paymentMethod === "upi"
-                        ? "UPI"
-                        : orderData.paymentMethod === "netbanking"
-                        ? "Net Banking"
-                        : orderData.paymentMethod === "wallet"
-                        ? "Digital Wallet"
-                        : "Online Payment"
+                          ? "Credit/Debit Card"
+                          : orderData.paymentMethod === "upi"
+                            ? "UPI"
+                            : orderData.paymentMethod === "netbanking"
+                              ? "Net Banking"
+                              : orderData.paymentMethod === "wallet"
+                                ? "Digital Wallet"
+                                : "Online Payment"
                       }
                     </p>
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Payment Status</p>
-                  <Badge 
+                  <Badge
                     variant={orderData.paymentStatus === 'completed' ? 'default' : 'secondary'}
                     className={orderData.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' : ''}
                   >
@@ -202,7 +202,7 @@ export default function OrderSuccessPage() {
                     <p className="font-semibold">₹{(item.price * item.quantity).toLocaleString()}</p>
                   </div>
                 ))}
-                
+
                 <div className="pt-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Subtotal:</span>
@@ -293,5 +293,23 @@ export default function OrderSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-16">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <OrderSuccessContent />
+    </Suspense>
   )
 }

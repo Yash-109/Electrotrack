@@ -15,7 +15,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
     const analytics = db.collection('analytics')
 
     // Calculate revenue from orders
-    const revenueData = await orders.aggregate([
+    const revenueData = await (orders as any).aggregate([
       {
         $match: {
           status: { $ne: 'cancelled' }
@@ -32,7 +32,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
     ]).toArray()
 
     // Calculate total expenses
-    const expenseData = await expenses.aggregate([
+    const expenseData = await (expenses as any).aggregate([
       {
         $group: {
           _id: null,
@@ -42,7 +42,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
     ]).toArray()
 
     // Get monthly revenue trends
-    const monthlyRevenue = await orders.aggregate([
+    const monthlyRevenue = await (orders as any).aggregate([
       {
         $match: {
           status: { $ne: 'cancelled' }
@@ -64,7 +64,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
     ]).toArray()
 
     // Get monthly expenses trends
-    const monthlyExpenses = await expenses.aggregate([
+    const monthlyExpenses = await (expenses as any).aggregate([
       {
         $group: {
           _id: {
@@ -80,7 +80,7 @@ export const GET = requireAdminRole('admin')(async (request: NextRequest) => {
     ]).toArray()
 
     // Get category-wise expenses
-    const categoryExpenses = await expenses.aggregate([
+    const categoryExpenses = await (expenses as any).aggregate([
       {
         $group: {
           _id: '$category',

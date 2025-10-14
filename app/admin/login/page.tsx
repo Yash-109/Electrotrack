@@ -67,11 +67,6 @@ export default function AdminLoginPage() {
     if (error) setError("")
   }
 
-  const fillDemoCredentials = (username: string, password: string) => {
-    setFormData({ username, password })
-    setError("")
-  }
-
   const adminCredentials = adminAuth.getAdminCredentials()
 
   return (
@@ -170,32 +165,22 @@ export default function AdminLoginPage() {
 
               {showCredentials && (
                 <div className="space-y-2 text-sm">
-                  {adminCredentials.map((cred, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-semibold text-blue-600">{cred.name}</span>
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{cred.role}</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-gray-600">Username:</span>
-                          <div className="font-mono bg-white p-1 rounded border">{cred.username}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">Role:</span>
-                          <div className="font-mono bg-white p-1 rounded border">{cred.role}</div>
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2 bg-transparent"
-                        onClick={() => fillDemoCredentials(cred.username, cred.password)}
-                      >
-                        Use These Credentials
-                      </Button>
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="flex items-center mb-2">
+                      <span className="text-yellow-600 font-semibold">🔒 Security Notice</span>
                     </div>
-                  ))}
+                    <p className="text-yellow-800 text-sm mb-3">
+                      Admin credentials are now stored securely in environment variables for enhanced security.
+                    </p>
+                    <div className="bg-gray-100 p-3 rounded border text-xs font-mono">
+                      <p className="mb-1"># Set these in your .env.local file:</p>
+                      <p className="mb-1">ADMIN_USERNAME_1=admin</p>
+                      <p className="mb-1">ADMIN_PASSWORD_1=$2b$10$your.bcrypt.hash.here</p>
+                      <p className="mt-2 text-blue-600">
+                        📖 See SECURITY-FIXES-GUIDE.md for setup instructions
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
