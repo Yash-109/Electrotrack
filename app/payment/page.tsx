@@ -9,12 +9,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { 
-  CreditCard, 
-  Wallet, 
-  Building2, 
-  Smartphone, 
-  Shield, 
+import {
+  CreditCard,
+  Wallet,
+  Building2,
+  Smartphone,
+  Shield,
   AlertCircle,
   QrCode,
   Banknote
@@ -221,7 +221,7 @@ export default function PaymentPage() {
                 title: "Payment successful!",
                 description: `Order ${verifyData.order.orderId} has been placed successfully.`,
               })
-              
+
               // Redirect to success page with order details
               router.push(`/order-success?orderId=${verifyData.order.orderId}&paymentId=${verifyData.order.paymentId}`)
             } else {
@@ -238,7 +238,7 @@ export default function PaymentPage() {
           setIsProcessing(false)
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: function () {
             setIsProcessing(false)
             toast({
               title: "Payment cancelled",
@@ -263,8 +263,91 @@ export default function PaymentPage() {
     }
   }
 
+  const processCODOrder = async () => {
+    if (!checkoutData || !currentUser) return
+
+    setIsProcessing(true)
+
+    try {
+      // Get shipping address from localStorage
+      const shippingData = localStorage.getItem("radhika_shipping_data")
+      if (!shippingData) {
+        toast({
+          title: "Missing shipping information",
+          description: "Please provide shipping address",
+          variant: "destructive",
+        })
+        router.push('/shipping')
+        return
+      }
+
+      const shippingAddress = JSON.parse(shippingData)
+
+      // Create order data
+      const orderData = {
+        userEmail: currentUser.email,
+        items: checkoutData.items,
+        shippingAddress,
+        paymentMethod: 'cod',
+        total: checkoutData.total,
+        subtotal: checkoutData.subtotal,
+        tax: checkoutData.tax,
+        shipping: checkoutData.shipping,
+        paymentStatus: 'pending', // COD is pending until delivery
+        status: 'processing'
+      }
+
+      // Create order in backend
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        // Store order data in localStorage for order success page
+        localStorage.setItem("radhika_current_order", JSON.stringify({
+          orderId: result.orderId,
+          paymentMethod: 'cod',
+          paymentStatus: 'pending',
+          ...result.order
+        }))
+
+        // Clear checkout data
+        localStorage.removeItem("radhika_checkout_cart")
+
+        toast({
+          title: "Order placed successfully!",
+          description: `Order ${result.orderId} has been placed. You can pay on delivery.`,
+        })
+
+        // Redirect to success page
+        router.push(`/order-success?orderId=${result.orderId}&paymentMethod=cod`)
+      } else {
+        throw new Error(result.error || 'Failed to place order')
+      }
+    } catch (error: any) {
+      console.error('COD order error:', error)
+      toast({
+        title: "Order failed",
+        description: error.message,
+        variant: "destructive",
+      })
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
   const handlePayment = async () => {
-    await processRazorpayPayment()
+    if (paymentMethod === 'cod') {
+      await processCODOrder()
+    } else {
+      await processRazorpayPayment()
+    }
   }
 
   if (!checkoutData || !isLoggedIn) {
@@ -300,7 +383,7 @@ export default function PaymentPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                    
+
                     {/* Credit/Debit Cards */}
                     <div className="flex items-center space-x-3 p-4 border-2 rounded-lg hover:border-blue-300 transition-colors">
                       <RadioGroupItem value="cards" id="cards" />
@@ -378,6 +461,23 @@ export default function PaymentPage() {
                       </Label>
                     </div>
 
+                    {/* Cash on Delivery */}
+                    <div className="flex items-center space-x-3 p-4 border-2 rounded-lg hover:border-yellow-300 transition-colors">
+                      <RadioGroupItem value="cod" id="cod" />
+                      <Label htmlFor="cod" className="flex-1 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Banknote className="h-6 w-6 text-yellow-600" />
+                            <div>
+                              <p className="font-semibold">Cash on Delivery</p>
+                              <p className="text-sm text-gray-600">Pay when your order is delivered</p>
+                            </div>
+                          </div>
+                          <div className="text-yellow-600 font-semibold text-sm">NO ADVANCE</div>
+                        </div>
+                      </Label>
+                    </div>
+
                   </RadioGroup>
 
                   {/* Security Info */}
@@ -387,7 +487,7 @@ export default function PaymentPage() {
                       <p className="text-sm text-green-800 font-semibold">100% Secure Payment</p>
                     </div>
                     <p className="text-sm text-green-700 mt-1">
-                      Your payment information is encrypted using 256-bit SSL technology. 
+                      Your payment information is encrypted using 256-bit SSL technology.
                       All transactions are processed securely through Razorpay.
                     </p>
                   </div>

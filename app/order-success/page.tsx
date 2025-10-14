@@ -22,28 +22,41 @@ function OrderSuccessContent() {
         // Check for URL parameters (from enhanced payment system)
         const orderId = searchParams.get('orderId')
         const paymentId = searchParams.get('paymentId')
+        const paymentMethod = searchParams.get('paymentMethod')
 
-        if (orderId && paymentId) {
-          // Fetch order details from backend
-          const response = await fetch(`/api/orders/${orderId}`)
-          if (response.ok) {
-            const result = await response.json()
-            if (result.success) {
-              setOrderData({
-                orderId,
-                paymentId,
-                ...result.order
-              })
+        if (orderId) {
+          // Fetch order details from backend first
+          try {
+            const response = await fetch(`/api/orders/${orderId}`)
+            if (response.ok) {
+              const result = await response.json()
+              if (result.success) {
+                setOrderData({
+                  orderId,
+                  paymentId: paymentId || 'COD_' + orderId,
+                  paymentMethod: paymentMethod || result.order.paymentMethod,
+                  ...result.order
+                })
+                return
+              }
             }
-          } else {
-            // Fallback to localStorage if API fails
-            const storedOrderData = localStorage.getItem("radhika_current_order")
-            if (storedOrderData) {
-              setOrderData(JSON.parse(storedOrderData))
-            }
+          } catch (error) {
+            console.error('Failed to fetch order from API:', error)
+          }
+
+          // If API fails, try localStorage
+          const storedOrderData = localStorage.getItem("radhika_current_order")
+          if (storedOrderData) {
+            const parsedData = JSON.parse(storedOrderData)
+            setOrderData({
+              orderId,
+              paymentId: paymentId || parsedData.paymentId || 'COD_' + orderId,
+              paymentMethod: paymentMethod || parsedData.paymentMethod,
+              ...parsedData
+            })
           }
         } else {
-          // Fallback to localStorage for older orders
+          // Fallback to localStorage for older orders or when no orderId in URL
           const storedOrderData = localStorage.getItem("radhika_current_order")
           if (storedOrderData) {
             setOrderData(JSON.parse(storedOrderData))
@@ -120,8 +133,15 @@ function OrderSuccessContent() {
             <div className="bg-green-100 text-green-600 p-4 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-10 w-10" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Payment Successful!</h1>
-            <p className="text-gray-600">Thank you for your purchase. Your order has been confirmed and payment processed.</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              {orderData.paymentMethod === 'cod' ? 'Order Placed Successfully!' : 'Payment Successful!'}
+            </h1>
+            <p className="text-gray-600">
+              {orderData.paymentMethod === 'cod'
+                ? 'Thank you for your order. You can pay when your order is delivered to your doorstep.'
+                : 'Thank you for your purchase. Your order has been confirmed and payment processed.'
+              }
+            </p>
           </div>
 
           {/* Order Details */}
@@ -171,9 +191,20 @@ function OrderSuccessContent() {
                   <p className="text-sm text-gray-600">Payment Status</p>
                   <Badge
                     variant={orderData.paymentStatus === 'completed' ? 'default' : 'secondary'}
-                    className={orderData.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' : ''}
+                    className={
+                      orderData.paymentStatus === 'completed'
+                        ? 'bg-green-100 text-green-800'
+                        : orderData.paymentMethod === 'cod'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : ''
+                    }
                   >
-                    {orderData.paymentStatus === 'completed' ? 'Paid' : 'Processing'}
+                    {orderData.paymentStatus === 'completed'
+                      ? 'Paid'
+                      : orderData.paymentMethod === 'cod'
+                        ? 'Pay on Delivery'
+                        : 'Processing'
+                    }
                   </Badge>
                 </div>
                 {orderData.paymentId && (
