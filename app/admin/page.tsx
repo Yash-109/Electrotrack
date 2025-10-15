@@ -5,7 +5,7 @@ import { AdminHeader } from "@/components/admin-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { BarChart3, CreditCard, DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight, Activity } from "lucide-react"
+import { BarChart3, CreditCard, DollarSign, TrendingUp, ArrowUpRight, ArrowDownRight, Activity, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { useTransactionStore } from "@/lib/transaction-store"
 import { adminAuth } from "@/lib/admin-auth"
@@ -14,7 +14,7 @@ import { useMemo } from "react"
 export default function AdminDashboard() {
   const { transactions, getStats } = useTransactionStore()
   const currentUser = adminAuth.getCurrentUser()
-  
+
   // Memoize stats to prevent unnecessary recalculations
   const stats = useMemo(() => getStats(), [getStats])
 
@@ -61,11 +61,11 @@ export default function AdminDashboard() {
   ], [stats.totalRevenue, stats.totalExpenses, stats.netProfit, safeTransactions.length])
 
   const recentTransactions = useMemo(() => safeTransactions
-    .filter(transaction => 
-      transaction && 
+    .filter(transaction =>
+      transaction &&
       typeof transaction === 'object' &&
-      transaction.id && 
-      transaction.date && 
+      transaction.id &&
+      transaction.date &&
       transaction.description &&
       typeof transaction.amount === 'number'
     ) // Filter out invalid transactions
@@ -101,9 +101,8 @@ export default function AdminDashboard() {
                             <ArrowDownRight className="h-4 w-4 text-red-600" />
                           )}
                           <span
-                            className={`text-sm font-medium ml-1 ${
-                              stat.changeType === "positive" ? "text-green-600" : "text-red-600"
-                            }`}
+                            className={`text-sm font-medium ml-1 ${stat.changeType === "positive" ? "text-green-600" : "text-red-600"
+                              }`}
                           >
                             {stat.change}
                           </span>
@@ -141,15 +140,13 @@ export default function AdminDashboard() {
                         <div key={`transaction-${transaction.id}-${index}`} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center space-x-4">
                             <div
-                              className={`p-2 rounded-full ${
-                                transaction.type === "income" ? "bg-green-100" : "bg-red-100"
-                              }`}
+                              className={`p-2 rounded-full ${transaction.type === "income" ? "bg-green-100" : "bg-red-100"
+                                }`}
                             >
                               {transaction.type === "income" ? (
                                 <TrendingUp
-                                  className={`h-4 w-4 ${
-                                    transaction.type === "income" ? "text-green-600" : "text-red-600"
-                                  }`}
+                                  className={`h-4 w-4 ${transaction.type === "income" ? "text-green-600" : "text-red-600"
+                                    }`}
                                 />
                               ) : (
                                 <CreditCard className="h-4 w-4 text-red-600" />
@@ -164,9 +161,8 @@ export default function AdminDashboard() {
                           </div>
                           <div className="text-right">
                             <p
-                              className={`font-semibold ${
-                                transaction.type === "income" ? "text-green-600" : "text-red-600"
-                              }`}
+                              className={`font-semibold ${transaction.type === "income" ? "text-green-600" : "text-red-600"
+                                }`}
                             >
                               {transaction.type === "income" ? "+" : "-"}₹{transaction.amount?.toLocaleString() || "0"}
                             </p>
@@ -198,6 +194,12 @@ export default function AdminDashboard() {
                   <CardDescription>Common admin tasks</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <Button asChild className="w-full justify-start bg-transparent" variant="outline">
+                    <Link href="/admin/contact-messages">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Contact Messages
+                    </Link>
+                  </Button>
                   <Button asChild className="w-full justify-start bg-transparent" variant="outline">
                     <Link href="/admin/transactions/manage">
                       <CreditCard className="h-4 w-4 mr-2" />

@@ -161,9 +161,9 @@ export function createVerificationEmailHtml(verificationUrl: string, userName: s
 
             <div class="message">
                 <p>Hello <strong>${userName}</strong>,</p>
-                
+
                 <p>Welcome to Radhika Electronics! We're excited to have you join our community of electronics enthusiasts.</p>
-                
+
                 <p>To complete your registration and ensure the security of your account, please verify your email address by clicking the button below:</p>
             </div>
 
@@ -199,7 +199,7 @@ export function createVerificationEmailHtml(verificationUrl: string, userName: s
                 <p><strong>Radhika Electronics</strong></p>
                 <p>Your trusted partner for quality electronics</p>
                 <p style="font-size: 12px; color: #aaa;">
-                    This email was sent to verify your account. If you have any questions, 
+                    This email was sent to verify your account. If you have any questions,
                     contact our support team.
                 </p>
                 <p style="font-size: 12px; color: #aaa;">
@@ -217,7 +217,7 @@ export function createVerificationEmailText(verificationUrl: string, userName: s
   return `
 Hello ${userName},
 
-Welcome to Radhika Electronics! 
+Welcome to Radhika Electronics!
 
 To complete your registration and verify your email address, please click the following link:
 
@@ -229,7 +229,7 @@ If you didn't create an account with us, you can safely ignore this email.
 
 What you'll get access to:
 - Exclusive deals on the latest electronics
-- Fast and secure online ordering  
+- Fast and secure online ordering
 - Order tracking and history
 - Priority customer support
 - Early access to new products
@@ -256,7 +256,7 @@ export async function sendVerificationEmail(
 }> {
   try {
     const verificationUrl = generateVerificationUrl(verificationToken, baseUrl)
-    
+
     const mailOptions = {
       from: {
         name: 'Radhika Electronics',
@@ -371,6 +371,110 @@ export async function sendWelcomeEmail(
 
   } catch (error: any) {
     console.error('Failed to send welcome email:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+// Send contact form notification to admin
+export async function sendContactNotification(contactData: {
+  fullName: string
+  email: string
+  phone?: string
+  subject: string
+  message: string
+}): Promise<{
+  success: boolean
+  messageId?: string
+  error?: string
+}> {
+  try {
+    const { fullName, email, phone, subject, message } = contactData
+
+    const notificationHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <style>
+              body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; }
+              .container { background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+              .header { text-align: center; color: #dc3545; font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+              .field { margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+              .field-label { font-weight: bold; color: #495057; margin-bottom: 5px; }
+              .field-value { color: #6c757d; }
+              .message-content { background: white; border: 1px solid #dee2e6; border-radius: 5px; padding: 15px; margin-top: 10px; }
+              .urgent { background: linear-gradient(135deg, #dc3545, #c82333); color: white; text-align: center; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="urgent">
+                  📧 NEW CONTACT MESSAGE RECEIVED
+              </div>
+              <div class="header">Contact Form Submission</div>
+
+              <div class="field">
+                  <div class="field-label">From:</div>
+                  <div class="field-value">${fullName}</div>
+              </div>
+
+              <div class="field">
+                  <div class="field-label">Email:</div>
+                  <div class="field-value">${email}</div>
+              </div>
+
+              ${phone ? `<div class="field">
+                  <div class="field-label">Phone:</div>
+                  <div class="field-value">${phone}</div>
+              </div>` : ''}
+
+              <div class="field">
+                  <div class="field-label">Subject:</div>
+                  <div class="field-value">${subject}</div>
+              </div>
+
+              <div class="field">
+                  <div class="field-label">Message:</div>
+                  <div class="message-content">${message.replace(/\n/g, '<br>')}</div>
+              </div>
+
+              <div class="field">
+                  <div class="field-label">Submitted At:</div>
+                  <div class="field-value">${new Date().toLocaleString()}</div>
+              </div>
+
+              <p style="text-align: center; margin-top: 30px; color: #6c757d;">
+                  <small>This message was sent through the Radhika Electronics contact form.</small>
+              </p>
+          </div>
+      </body>
+      </html>
+    `
+
+    const mailOptions = {
+      from: {
+        name: 'Radhika Electronics Contact Form',
+        address: EMAIL_CONFIG.auth.user
+      },
+      to: 'jayeshsavaliya3011@gmail.com', // Admin email
+      subject: `🚨 New Contact Message: ${subject}`,
+      html: notificationHtml,
+      text: `New Contact Message Received\n\nFrom: ${fullName}\nEmail: ${email}\nPhone: ${phone || 'Not provided'}\nSubject: ${subject}\n\nMessage:\n${message}\n\nSubmitted at: ${new Date().toLocaleString()}`,
+      replyTo: email // Allow admin to reply directly to the customer
+    }
+
+    const transporter = getTransporter()
+    const result = await transporter.sendMail(mailOptions)
+
+    return {
+      success: true,
+      messageId: result.messageId
+    }
+
+  } catch (error: any) {
+    console.error('Failed to send contact notification:', error)
     return {
       success: false,
       error: error.message
