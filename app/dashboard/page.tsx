@@ -20,7 +20,7 @@ const products = [
     category: "fans",
     price: 2499,
     originalPrice: 2999,
-    image: "/placeholder.svg?height=200&width=200",
+    image: "/images/fan.jpg",
     rating: 4.5,
     reviews: 128,
     inStock: true,
@@ -32,7 +32,7 @@ const products = [
     category: "tvs",
     price: 32999,
     originalPrice: 36999,
-    image: "/placeholder.svg?height=200&width=200",
+    image: "/images/TV.jpg",
     rating: 4.7,
     reviews: 89,
     inStock: true,
@@ -44,7 +44,7 @@ const products = [
     category: "acs",
     price: 28999,
     originalPrice: 32999,
-    image: "/placeholder.svg?height=200&width=200",
+    image: "/images/AC.jpg",
     rating: 4.6,
     reviews: 156,
     inStock: true,
@@ -56,7 +56,7 @@ const products = [
     category: "coolers",
     price: 8999,
     originalPrice: 10999,
-    image: "/placeholder.svg?height=200&width=200",
+    image: "/images/cooler.jpg",
     rating: 4.3,
     reviews: 67,
     inStock: true,
@@ -68,7 +68,7 @@ const products = [
     category: "mobiles",
     price: 79999,
     originalPrice: 84999,
-    image: "/placeholder.svg?height=200&width=200",
+    image: "/images/phone.jpg",
     rating: 4.8,
     reviews: 234,
     inStock: true,
@@ -80,7 +80,7 @@ const products = [
     category: "laptops",
     price: 45999,
     originalPrice: 49999,
-    image: "/placeholder.svg?height=200&width=200",
+    image: "/images/laptop.jpg",
     rating: 4.4,
     reviews: 92,
     inStock: true,
@@ -271,11 +271,11 @@ export default function DashboardPage() {
           {filteredProducts.map((product) => (
             <Card key={product.id} className="hover:shadow-lg transition-shadow">
               <CardHeader className="p-0">
-                <div className="relative">
+                <div className="relative bg-gray-50 rounded-t-lg overflow-hidden">
                   <img
                     src={product.image || "/placeholder.svg"}
                     alt={product.name}
-                    className="w-full h-48 object-cover rounded-t-lg"
+                    className="w-full h-48 object-contain p-4 hover:scale-105 transition-transform duration-300"
                   />
                   {product.originalPrice > product.price && (
                     <Badge className="absolute top-2 left-2 bg-red-500">
