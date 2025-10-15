@@ -241,14 +241,6 @@ function OrderSuccessContent() {
               <CardTitle>Order Items</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* Debug information - can be removed later */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mb-4 p-3 bg-gray-100 rounded text-xs">
-                  <p><strong>Debug - Order Data:</strong></p>
-                  <pre>{JSON.stringify(orderData, null, 2)}</pre>
-                </div>
-              )}
-
               <div className="space-y-3">
                 {(() => {
                   // Get items from the correct location
@@ -256,22 +248,25 @@ function OrderSuccessContent() {
 
                   return items && items.length > 0 ? (
                     items.map((item: any, index: number) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                      <div key={index} className="flex justify-between items-center py-3 border-b last:border-b-0">
                         <div className="flex-1">
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                          <p className="font-medium text-gray-900">{item.name}</p>
+                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                          <p className="text-sm text-gray-500">₹{item.price.toLocaleString()} each</p>
                         </div>
-                        <p className="font-semibold">₹{(item.price * item.quantity).toLocaleString()}</p>
+                        <div className="text-right">
+                          <p className="font-semibold text-gray-900">₹{(item.price * item.quantity).toLocaleString()}</p>
+                        </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-4 text-gray-500">
-                      <p>No items found in order data</p>
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No items found in this order</p>
                     </div>
                   )
                 })()}
 
-                <div className="pt-3 space-y-2">
+                <div className="pt-4 space-y-2 border-t">
                   {(() => {
                     // Get items from the correct location
                     const items = orderData.items || orderData.cartData?.items || []
@@ -286,38 +281,26 @@ function OrderSuccessContent() {
                     const shipping = orderData.shipping || orderData.cartData?.shipping || 0
                     const total = orderData.total || orderData.cartData?.total || (subtotal + tax + shipping)
 
-                    // Debug logging
-                    console.log('Order calculation debug:', {
-                      orderData,
-                      items,
-                      calculatedSubtotal,
-                      subtotal,
-                      tax,
-                      shipping,
-                      total,
-                      itemsLength: items?.length
-                    })
-
                     return (
                       <>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-sm text-gray-600">
                           <span>Subtotal:</span>
                           <span>₹{subtotal.toLocaleString()}</span>
                         </div>
                         {tax > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span>Tax:</span>
+                          <div className="flex justify-between text-sm text-gray-600">
+                            <span>Tax (GST):</span>
                             <span>₹{tax.toLocaleString()}</span>
                           </div>
                         )}
                         {shipping > 0 && (
-                          <div className="flex justify-between text-sm">
+                          <div className="flex justify-between text-sm text-gray-600">
                             <span>Shipping:</span>
                             <span>₹{shipping.toLocaleString()}</span>
                           </div>
                         )}
-                        <div className="flex justify-between font-semibold text-lg pt-2 border-t">
-                          <span>Total:</span>
+                        <div className="flex justify-between font-bold text-lg pt-2 border-t text-gray-900">
+                          <span>Total Amount:</span>
                           <span className="text-green-600">₹{total.toLocaleString()}</span>
                         </div>
                       </>
