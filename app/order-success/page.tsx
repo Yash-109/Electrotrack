@@ -31,12 +31,29 @@ function OrderSuccessContent() {
             if (response.ok) {
               const result = await response.json()
               if (result.success) {
-                setOrderData({
+                const orderDataToSet = {
                   orderId,
                   paymentId: paymentId || 'COD_' + orderId,
                   paymentMethod: paymentMethod || result.order.paymentMethod,
                   ...result.order
-                })
+                }
+                setOrderData(orderDataToSet)
+
+                // Store in localStorage for future refreshes
+                localStorage.setItem("radhika_last_order", JSON.stringify(orderDataToSet))
+
+                // Clear cart data only after successful API fetch
+                const user = userAuth.getCurrentUser()
+                if (user) {
+                  try {
+                    await CartService.clearCart(user.email)
+                    console.log('Cart cleared after successful order')
+                  } catch (error) {
+                    console.error('Failed to clear cart after order:', error)
+                  }
+                }
+                localStorage.removeItem("radhika_checkout_cart")
+                localStorage.removeItem("radhika_current_order")
                 return
               }
             }
@@ -46,6 +63,8 @@ function OrderSuccessContent() {
 
           // If API fails, try localStorage
           const storedOrderData = localStorage.getItem("radhika_current_order")
+          const lastOrderData = localStorage.getItem("radhika_last_order")
+
           if (storedOrderData) {
             const parsedData = JSON.parse(storedOrderData)
             setOrderData({
@@ -54,29 +73,28 @@ function OrderSuccessContent() {
               paymentMethod: paymentMethod || parsedData.paymentMethod,
               ...parsedData
             })
+          } else if (lastOrderData) {
+            // Use last order data if current order matches
+            const parsedData = JSON.parse(lastOrderData)
+            if (parsedData.orderId === orderId) {
+              setOrderData(parsedData)
+            }
           }
         } else {
           // Fallback to localStorage for older orders or when no orderId in URL
           const storedOrderData = localStorage.getItem("radhika_current_order")
+          const lastOrderData = localStorage.getItem("radhika_last_order")
+
           if (storedOrderData) {
             setOrderData(JSON.parse(storedOrderData))
+          } else if (lastOrderData) {
+            setOrderData(JSON.parse(lastOrderData))
           }
         }
 
-        // Clear the cart after successful order
-        const user = userAuth.getCurrentUser()
-        if (user) {
-          try {
-            await CartService.clearCart(user.email)
-            console.log('Cart cleared after successful order')
-          } catch (error) {
-            console.error('Failed to clear cart after order:', error)
-          }
-        }
-
-        // Clear checkout cart from localStorage
-        localStorage.removeItem("radhika_checkout_cart")
-        localStorage.removeItem("radhika_current_order")
+        // Only clear checkout cart, keep current order for refreshes
+        // localStorage.removeItem("radhika_checkout_cart") // Only clear this after API success
+        // localStorage.removeItem("radhika_current_order") // Keep this for refreshes
 
       } catch (error) {
         console.error('Error loading order details:', error)
@@ -223,38 +241,88 @@ function OrderSuccessContent() {
               <CardTitle>Order Items</CardTitle>
             </CardHeader>
             <CardContent>
+              {/* Debug information - can be removed later */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-4 p-3 bg-gray-100 rounded text-xs">
+                  <p><strong>Debug - Order Data:</strong></p>
+                  <pre>{JSON.stringify(orderData, null, 2)}</pre>
+                </div>
+              )}
+
               <div className="space-y-3">
-                {orderData.items?.map((item: any, index: number) => (
-                  <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                    <div className="flex-1">
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                {(() => {
+                  // Get items from the correct location
+                  const items = orderData.items || orderData.cartData?.items || []
+
+                  return items && items.length > 0 ? (
+                    items.map((item: any, index: number) => (
+                      <div key={index} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                        <div className="flex-1">
+                          <p className="font-medium">{item.name}</p>
+                          <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                        </div>
+                        <p className="font-semibold">₹{(item.price * item.quantity).toLocaleString()}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-gray-500">
+                      <p>No items found in order data</p>
                     </div>
-                    <p className="font-semibold">₹{(item.price * item.quantity).toLocaleString()}</p>
-                  </div>
-                ))}
+                  )
+                })()}
 
                 <div className="pt-3 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal:</span>
-                    <span>₹{orderData.subtotal?.toLocaleString() || orderData.total?.toLocaleString()}</span>
-                  </div>
-                  {orderData.tax > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Tax:</span>
-                      <span>₹{orderData.tax.toLocaleString()}</span>
-                    </div>
-                  )}
-                  {orderData.shipping > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span>Shipping:</span>
-                      <span>₹{orderData.shipping.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-semibold text-lg pt-2 border-t">
-                    <span>Total:</span>
-                    <span className="text-green-600">₹{orderData.total?.toLocaleString()}</span>
-                  </div>
+                  {(() => {
+                    // Get items from the correct location
+                    const items = orderData.items || orderData.cartData?.items || []
+
+                    // Calculate totals from items if not provided
+                    const calculatedSubtotal = items?.reduce((sum: number, item: any) =>
+                      sum + (item.price * item.quantity), 0) || 0
+
+                    // Use stored totals first, then cartData totals, then calculated
+                    const subtotal = orderData.subtotal || orderData.cartData?.subtotal || calculatedSubtotal
+                    const tax = orderData.tax || orderData.cartData?.tax || 0
+                    const shipping = orderData.shipping || orderData.cartData?.shipping || 0
+                    const total = orderData.total || orderData.cartData?.total || (subtotal + tax + shipping)
+
+                    // Debug logging
+                    console.log('Order calculation debug:', {
+                      orderData,
+                      items,
+                      calculatedSubtotal,
+                      subtotal,
+                      tax,
+                      shipping,
+                      total,
+                      itemsLength: items?.length
+                    })
+
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span>Subtotal:</span>
+                          <span>₹{subtotal.toLocaleString()}</span>
+                        </div>
+                        {tax > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Tax:</span>
+                            <span>₹{tax.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {shipping > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Shipping:</span>
+                            <span>₹{shipping.toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+                          <span>Total:</span>
+                          <span className="text-green-600">₹{total.toLocaleString()}</span>
+                        </div>
+                      </>
+                    )
+                  })()}
                 </div>
               </div>
             </CardContent>
