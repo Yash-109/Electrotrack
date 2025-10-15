@@ -310,12 +310,16 @@ export default function PaymentPage() {
 
       if (result.success) {
         // Store order data in localStorage for order success page
-        localStorage.setItem("radhika_current_order", JSON.stringify({
+        const orderDataToStore = {
           orderId: result.orderId,
           paymentMethod: 'cod',
           paymentStatus: 'pending',
           ...result.order
-        }))
+        }
+        localStorage.setItem("radhika_current_order", JSON.stringify(orderDataToStore))
+
+        // Also store as last order for refresh protection
+        localStorage.setItem("radhika_last_order", JSON.stringify(orderDataToStore))
 
         // Clear checkout data
         localStorage.removeItem("radhika_checkout_cart")
@@ -325,7 +329,7 @@ export default function PaymentPage() {
           description: `Order ${result.orderId} has been placed. You can pay on delivery.`,
         })
 
-        // Redirect to success page
+        // Redirect to success page with orderId
         router.push(`/order-success?orderId=${result.orderId}&paymentMethod=cod`)
       } else {
         throw new Error(result.error || 'Failed to place order')

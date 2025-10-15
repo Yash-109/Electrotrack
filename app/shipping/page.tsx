@@ -92,7 +92,7 @@ export default function ShippingPage() {
       try {
         const response = await fetch(`/api/user/profile?userId=${encodeURIComponent(user.email)}`)
         const data = await response.json()
-        
+
         if (data.success && data.user) {
           // Pre-fill user data
           setShippingData((prev) => ({
@@ -101,17 +101,17 @@ export default function ShippingPage() {
             email: data.user.email || "",
             phone: data.user.phone || "",
           }))
-          
+
           // Load saved addresses
           const addresses = data.user.shippingAddresses || []
           setSavedAddresses(addresses)
-          
+
           // If user has addresses, find default or use first one
           if (addresses.length > 0) {
             const defaultAddress = addresses.find((addr: any) => addr.isDefault) || addresses[0]
             setSelectedAddressId(defaultAddress.id)
             setIsNewAddress(false)
-            
+
             // Pre-fill with default address
             setShippingData((prev) => ({
               ...prev,
@@ -160,7 +160,7 @@ export default function ShippingPage() {
     } else {
       setIsNewAddress(false)
       setSelectedAddressId(addressId)
-      
+
       // Find and load selected address
       const selectedAddress = savedAddresses.find((addr: any) => addr.id === addressId)
       if (selectedAddress) {
@@ -220,7 +220,7 @@ export default function ShippingPage() {
 
       // Add each cart item as a separate sale in admin system with actual order date
       const orderDate = new Date().toISOString().split("T")[0] // Current date for the order
-      
+
       cartData.items.forEach((item) => {
         for (let i = 0; i < item.quantity; i++) {
           addOnlineSale({
@@ -284,20 +284,23 @@ export default function ShippingPage() {
           })
 
           const result = await response.json()
-          
+
           if (result.success) {
             // Update localStorage with the generated orderId
             orderData.orderId = result.orderId
             localStorage.setItem("radhika_current_order", JSON.stringify(orderData))
-            
+
+            // Also store as last order for refresh protection
+            localStorage.setItem("radhika_last_order", JSON.stringify(orderData))
+
             toast({
               title: "Order placed successfully!",
               description: `Your order ${result.orderId} will be delivered within 3-5 business days.`,
             })
 
-            // Clear cart and redirect to success page
+            // Clear cart only after successful order and redirect
             localStorage.removeItem("radhika_checkout_cart")
-            router.push("/order-success")
+            router.push(`/order-success?orderId=${result.orderId}&paymentMethod=cod`)
           } else {
             throw new Error(result.error || 'Failed to save order')
           }
@@ -308,10 +311,11 @@ export default function ShippingPage() {
             description: "Order was processed but may not appear in your order history. Please contact support.",
             variant: "destructive",
           })
-          
-          // Still redirect to success since admin system was updated
+
+          // Still redirect to success since admin system was updated, but keep order data
+          localStorage.setItem("radhika_last_order", JSON.stringify(orderData))
           localStorage.removeItem("radhika_checkout_cart")
-          router.push("/order-success")
+          router.push(`/order-success?orderId=${orderData.orderId}&paymentMethod=cod`)
         }
       }
     } catch (error) {
@@ -423,8 +427,8 @@ export default function ShippingPage() {
                   {savedAddresses.length > 0 && (
                     <div>
                       <Label>Select Address</Label>
-                      <RadioGroup 
-                        value={isNewAddress ? 'new' : selectedAddressId} 
+                      <RadioGroup
+                        value={isNewAddress ? 'new' : selectedAddressId}
                         onValueChange={handleAddressSelection}
                         className="mt-2"
                       >
