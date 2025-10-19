@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Fan, Tv, AirVent, Waves, Smartphone, Laptop } from "lucide-react"
 import { Footer } from "@/components/footer"
+import GetStartedButton from "@/components/get-started-button"
 
 export default function HomePage() {
   const categories = [
@@ -27,18 +28,14 @@ export default function HomePage() {
             Your trusted partner for premium electronics since years
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/signup">
-              <Button size="lg" variant="secondary" className="text-blue-600">
-                Get Started
-              </Button>
-            </Link>
+            <GetStartedButton />
             <Link href="/dashboard">
               <Button
                 size="lg"
                 variant="outline"
                 className="text-white border-white hover:bg-white hover:text-blue-600 bg-transparent"
               >
-                Browse Products
+                Shop Now
               </Button>
             </Link>
           </div>

@@ -105,7 +105,15 @@ A modern, full-stack e-commerce platform for electronics retail, built with Next
 
 5. **Start the application**
    ```bash
+   # Default port 3000 (recommended)
    npm run dev
+
+   # Alternative port 3001
+   npm run dev:alt
+
+   # Custom port (requires Google Console setup)
+   npm run setup-port 3003
+   npm run dev -- -p 3003
    ```
 
 6. **Initialize database**

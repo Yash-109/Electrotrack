@@ -6,7 +6,16 @@ import { getMongoClient } from "@/lib/mongodb"
 
 const clientPromise = getMongoClient()
 
-const authOptions: any = {
+// Dynamic base URL detection for development
+const getBaseUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXTAUTH_URL || 'http://localhost:3000'
+  }
+  // In development, use the current request headers or fallback
+  return process.env.NEXTAUTH_URL || 'http://localhost:3000'
+}
+
+const authOptions: AuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
@@ -25,9 +34,16 @@ const authOptions: any = {
       return session
     },
     async signIn({ user, account, profile }: { user: any; account: any; profile: any }) {
-      // You can add custom logic here for user validation
-      // For now, allow all Google sign-ins
+      // Allow all Google sign-ins for now
+      console.log('Google Sign-in attempt:', { user: user?.email, account: account?.provider })
       return true
+    },
+    async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
+      // Redirect to dashboard after successful login
+      if (url.includes('/api/auth/callback')) {
+        return `${baseUrl}/dashboard`
+      }
+      return url.startsWith(baseUrl) ? url : baseUrl
     },
   },
   pages: {
