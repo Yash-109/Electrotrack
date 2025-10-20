@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -41,7 +42,7 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
 
   const startResendTimer = () => {
     setState(prev => ({ ...prev, canResend: false, resendTimer: 60 }))
-    
+
     const timer = setInterval(() => {
       setState(prev => {
         if (prev.resendTimer <= 1) {
@@ -59,41 +60,48 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
       return
     }
 
-    setState(prev => ({ ...prev, loading: true, error: '', success: '' }))
+    // Simple client-side validation - let server do the real Gmail existence check
+    if (!state.email.endsWith('@gmail.com')) {
+      setState(prev => ({
+        ...prev,
+        error: 'Please enter a Gmail address ending with @gmail.com'
+      }))
+      return
+    } setState(prev => ({ ...prev, loading: true, error: '', success: '' }))
 
     try {
       const response = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: state.email, 
-          name: state.name 
+        body: JSON.stringify({
+          email: state.email,
+          name: state.name
         })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           step: 'code',
           success: 'Verification code sent to your email!',
           codeSent: true,
-          loading: false 
+          loading: false
         }))
         startResendTimer()
       } else {
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           error: data.error || 'Failed to send verification code',
-          loading: false 
+          loading: false
         }))
       }
     } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         error: 'Network error. Please try again.',
-        loading: false 
+        loading: false
       }))
     }
   }
@@ -110,22 +118,22 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
       const response = await fetch('/api/auth/verify-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email: state.email, 
-          code: state.code 
+        body: JSON.stringify({
+          email: state.email,
+          code: state.code
         })
       })
 
       const data = await response.json()
 
       if (data.success) {
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           step: 'verified',
           success: 'Email verified successfully!',
-          loading: false 
+          loading: false
         }))
-        
+
         // Pass verification data to parent
         onVerificationSuccess({
           email: data.email,
@@ -133,24 +141,24 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
           verificationToken: data.verificationToken
         })
       } else {
-        setState(prev => ({ 
-          ...prev, 
+        setState(prev => ({
+          ...prev,
           error: data.error || 'Invalid verification code',
-          loading: false 
+          loading: false
         }))
       }
     } catch (error) {
-      setState(prev => ({ 
-        ...prev, 
+      setState(prev => ({
+        ...prev,
         error: 'Network error. Please try again.',
-        loading: false 
+        loading: false
       }))
     }
   }
 
   const resendCode = async () => {
     if (!state.canResend) return
-    
+
     setState(prev => ({ ...prev, code: '' }))
     await sendVerificationCode()
   }
@@ -169,7 +177,19 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
         {state.error && (
           <Alert variant="destructive">
             <XCircle className="h-4 w-4" />
-            <AlertDescription>{state.error}</AlertDescription>
+            <AlertDescription>
+              {state.error}
+              {state.error.toLowerCase().includes('user already exists') && (
+                <div className="mt-2">
+                  <p className="text-sm">
+                    Already have an account?{' '}
+                    <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline">
+                      Sign in here
+                    </Link>
+                  </p>
+                </div>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -193,21 +213,24 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
                 disabled={state.loading}
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email address"
+                placeholder="Enter your Gmail address (e.g., yourname@gmail.com)"
                 value={state.email}
                 onChange={(e) => setState(prev => ({ ...prev, email: e.target.value }))}
                 disabled={state.loading}
               />
+              <p className="text-xs text-gray-500">
+                💡 Make sure this is a real Gmail address you can access to receive the verification code
+              </p>
             </div>
 
-            <Button 
-              onClick={sendVerificationCode} 
+            <Button
+              onClick={sendVerificationCode}
               disabled={state.loading}
               className="w-full"
             >
@@ -253,8 +276,8 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
               />
             </div>
 
-            <Button 
-              onClick={verifyCode} 
+            <Button
+              onClick={verifyCode}
               disabled={state.loading || state.code.length !== 6}
               className="w-full"
             >
@@ -278,8 +301,8 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
                 disabled={!state.canResend || state.loading}
                 className="text-sm"
               >
-                {state.canResend 
-                  ? 'Resend Code' 
+                {state.canResend
+                  ? 'Resend Code'
                   : `Resend in ${state.resendTimer}s`
                 }
               </Button>
@@ -287,12 +310,12 @@ export default function PreSignupVerification({ onVerificationSuccess }: PreSign
 
             <Button
               variant="outline"
-              onClick={() => setState(prev => ({ 
-                ...prev, 
-                step: 'email', 
+              onClick={() => setState(prev => ({
+                ...prev,
+                step: 'email',
                 code: '',
                 error: '',
-                success: '' 
+                success: ''
               }))}
               className="w-full"
             >
