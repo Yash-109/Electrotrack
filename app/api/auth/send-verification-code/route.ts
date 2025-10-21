@@ -4,14 +4,16 @@ import { sendVerificationCode, generateVerificationCode } from '@/lib/pre-signup
 import { getDb } from '@/lib/mongodb'
 import { logSecurityEvent } from '@/lib/security-analytics'
 
-// Helper function to get client IP address
+// Helper function to get client IP address with better detection
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
   const realIP = request.headers.get('x-real-ip')
   const cfIP = request.headers.get('cf-connecting-ip')
 
   if (forwarded) {
-    return forwarded.split(',')[0].trim()
+    // Handle multiple IPs in forwarded header (first one is the original client)
+    const ips = forwarded.split(',').map(ip => ip.trim())
+    return ips[0] || 'unknown'
   }
   if (realIP) {
     return realIP.trim()
@@ -20,11 +22,15 @@ function getClientIP(request: NextRequest): string {
     return cfIP.trim()
   }
 
-  // Fallback to remote address from headers
-  return request.headers.get('x-forwarded-for') || 'unknown'
-}
+  // Additional fallback headers
+  const remoteAddr = request.headers.get('remote-addr')
+  if (remoteAddr) {
+    return remoteAddr.trim()
+  }
 
-// Gmail address validation - Block obvious fake patterns
+  // Final fallback
+  return 'unknown'
+}// Gmail address validation - Block obvious fake patterns
 async function verifyGmailExists(email: string): Promise<boolean> {
   try {
     const localPart = email.split('@')[0].toLowerCase()
