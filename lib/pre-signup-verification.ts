@@ -18,16 +18,39 @@ const EMAIL_CONFIG = {
 
 let transporter: nodemailer.Transporter | null = null
 
-function getTransporter() {
+function getTransporter(): nodemailer.Transporter {
   if (!transporter) {
-    transporter = nodemailer.createTransport(EMAIL_CONFIG)
+    try {
+      transporter = nodemailer.createTransport(EMAIL_CONFIG)
+      // Verify connection on first use
+      transporter.verify((error) => {
+        if (error) {
+          console.error('Email transporter verification failed:', error)
+        } else {
+          console.log('Email transporter ready')
+        }
+      })
+    } catch (error) {
+      console.error('Failed to create email transporter:', error)
+      throw new Error('Email service unavailable')
+    }
   }
   return transporter
 }
 
-// Generate 6-digit verification code
+// Generate 6-digit verification code with better security
 export function generateVerificationCode(): string {
-  return crypto.randomInt(100000, 999999).toString()
+  // Use crypto.randomBytes for better security than Math.random
+  const bytes = crypto.randomBytes(4)
+  const num = bytes.readUInt32BE(0)
+  // Ensure 6 digits by taking modulo and padding
+  const code = (num % 900000 + 100000).toString()
+  return code
+}
+
+// Validate verification code format
+export function isValidVerificationCode(code: string): boolean {
+  return /^\d{6}$/.test(code) && code.length === 6
 }
 
 // Create verification email template
@@ -107,29 +130,29 @@ export function createVerificationCodeEmailHtml(verificationCode: string, userNa
         <div class="container">
             <div class="logo">⚡ Radhika Electronics</div>
             <h1 class="title">Verify Your Gmail Address</h1>
-            
+
             <p class="message">
                 Hello <strong>${userName}</strong>,<br>
                 We need to verify your Gmail address before creating your account.
             </p>
-            
+
             <p class="message">
                 Please enter this verification code in the signup form:
             </p>
-            
+
             <div class="verification-code">${verificationCode}</div>
-            
+
             <div class="security-notice">
                 <strong>🛡️ Security Notice:</strong><br>
                 • This code will expire in 10 minutes for your security<br>
                 • Only use this code on the Radhika Electronics website<br>
                 • If you didn't request this code, you can safely ignore this email
             </div>
-            
+
             <p class="message">
                 After verification, you'll be able to complete your account registration and start shopping with us!
             </p>
-            
+
             <div class="footer">
                 <p><strong>Radhika Electronics</strong></p>
                 <p>Your trusted partner for quality electronics</p>
