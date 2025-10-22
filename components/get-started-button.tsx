@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useSession } from "next-auth/react"
 
 export default function GetStartedButton() {
@@ -36,7 +37,7 @@ export default function GetStartedButton() {
     if (status === "loading" || isLoading) {
         return (
             <Button size="lg" variant="secondary" className="text-blue-600" disabled>
-                Loading...
+                <LoadingSpinner size="sm" variant="inline" text="Loading..." />
             </Button>
         )
     }
