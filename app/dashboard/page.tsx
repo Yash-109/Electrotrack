@@ -431,11 +431,9 @@ export default function DashboardPage() {
       }
 
       // Save updated cart
-      console.log('Saving cart for user:', currentUser.email, 'with items:', updatedCart)
       const success = await CartService.saveCart(currentUser.email, updatedCart)
 
       if (success) {
-        console.log('Cart saved successfully, dispatching cartUpdated event')
         toast({
           title: "Added to cart!",
           description: `${product.name} has been added to your cart.`,

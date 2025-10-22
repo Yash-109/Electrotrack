@@ -30,18 +30,14 @@ export function Header() {
   const fetchCartCount = useCallback(async (userEmail: string) => {
     if (isLoadingCart) return // Prevent multiple simultaneous requests
 
-    console.log('fetchCartCount called for user:', userEmail)
     setIsLoadingCart(true)
     try {
       const cartItems = await CartService.getCart(userEmail)
-      console.log('Retrieved cart items:', cartItems)
 
       if (cartItems && Array.isArray(cartItems)) {
         const totalItems = cartItems.reduce((total: number, item: any) => total + (item.quantity || 0), 0)
-        console.log('Total cart items:', totalItems)
         setCartItemCount(totalItems)
       } else {
-        console.log('No cart items found, setting count to 0')
         setCartItemCount(0)
       }
     } catch (error) {
@@ -64,9 +60,7 @@ export function Header() {
   // Listen for cart updates
   useEffect(() => {
     const handleCartUpdate = () => {
-      console.log('cartUpdated event received in header')
       if (currentUser?.email) {
-        console.log('Fetching cart count for user:', currentUser.email)
         // Add a small delay to ensure cart is saved before fetching count
         setTimeout(() => {
           fetchCartCount(currentUser.email)
