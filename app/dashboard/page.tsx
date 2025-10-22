@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ShoppingCart, Star, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
@@ -343,6 +344,8 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("name")
+  const [addingToCart, setAddingToCart] = useState<number | null>(null)
+  const [loadingProducts, setLoadingProducts] = useState(false)
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -395,6 +398,9 @@ export default function DashboardPage() {
       })
       return
     }
+
+    // Set loading state for this specific product
+    setAddingToCart(product.id)
 
     try {
       // Get current cart
@@ -451,6 +457,9 @@ export default function DashboardPage() {
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      // Clear loading state
+      setAddingToCart(null)
     }
   }
 
@@ -460,10 +469,7 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
+          <LoadingSpinner size="lg" text="Loading dashboard..." />
         </div>
       </div>
     )
@@ -564,9 +570,19 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <Button className="w-full" onClick={() => addToCart(product)} disabled={!product.inStock}>
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  {product.inStock ? "Add to Cart" : "Out of Stock"}
+                <Button
+                  className="w-full"
+                  onClick={() => addToCart(product)}
+                  disabled={!product.inStock || addingToCart === product.id}
+                >
+                  {addingToCart === product.id ? (
+                    <LoadingSpinner size="sm" variant="inline" text="Adding..." />
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      {product.inStock ? "Add to Cart" : "Out of Stock"}
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </Card>
