@@ -104,6 +104,8 @@ export default function CartPage() {
 
       try {
         await CartService.saveCart(currentUser.email, serviceItems)
+        // Dispatch cart updated event for header to update count
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
       } catch (error) {
         console.error('Failed to update cart:', error)
         // Revert local changes on error
@@ -161,6 +163,8 @@ export default function CartPage() {
       }))
 
       await CartService.saveCart(currentUser.email, serviceItems)
+      // Dispatch cart updated event for header to update count
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
       toast({
         title: "Item removed",
         description: "Item has been removed from your cart.",

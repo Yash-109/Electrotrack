@@ -52,31 +52,34 @@ export function Header() {
     }
   }, [isLoadingCart])
 
-  // TODO: Fix infinite loop issue with cart fetching
-  // Temporarily disabled to fix performance issue
-  // useEffect(() => {
-  //   if (isLoggedIn && currentUser?.email) {
-  //     fetchCartCount(currentUser.email)
-  //   } else {
-  //     setCartItemCount(0)
-  //   }
-  // }, [isLoggedIn, currentUser?.email, fetchCartCount])
+  // Load initial cart count when user logs in
+  useEffect(() => {
+    if (isLoggedIn && currentUser?.email) {
+      fetchCartCount(currentUser.email)
+    } else {
+      setCartItemCount(0)
+    }
+  }, [isLoggedIn, currentUser?.email])
 
-  // useEffect(() => {
-  //   const handleCartUpdate = () => {
-  //     console.log('cartUpdated event received in header')
-  //     if (currentUser?.email) {
-  //       console.log('Fetching cart count for user:', currentUser.email)
-  //       fetchCartCount(currentUser.email)
-  //     }
-  //   }
+  // Listen for cart updates
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      console.log('cartUpdated event received in header')
+      if (currentUser?.email) {
+        console.log('Fetching cart count for user:', currentUser.email)
+        // Add a small delay to ensure cart is saved before fetching count
+        setTimeout(() => {
+          fetchCartCount(currentUser.email)
+        }, 100)
+      }
+    }
 
-  //   window.addEventListener("cartUpdated", handleCartUpdate)
+    window.addEventListener("cartUpdated", handleCartUpdate)
 
-  //   return () => {
-  //     window.removeEventListener("cartUpdated", handleCartUpdate)
-  //   }
-  // }, [currentUser, fetchCartCount])
+    return () => {
+      window.removeEventListener("cartUpdated", handleCartUpdate)
+    }
+  }, [currentUser?.email, fetchCartCount])
 
   const handleLogout = async () => {
     await logout()
