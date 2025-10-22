@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Minus, Plus, Trash2, ShoppingBag, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
@@ -29,6 +30,8 @@ export default function CartPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set())
+  const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
   const router = useRouter()
   const { toast } = useToast()
 
@@ -38,7 +41,7 @@ export default function CartPage() {
       const user = userAuth.getCurrentUser()
       setIsLoggedIn(loggedIn)
       setCurrentUser(user)
-      
+
       if (loggedIn && user) {
         // Load cart from database using new cart service
         try {
@@ -60,16 +63,16 @@ export default function CartPage() {
         // Not logged in - show empty cart
         setCartItems([])
       }
-      
+
       setIsLoading(false)
     }
-    
+
     initializeCart()
   }, [])
 
   const updateQuantity = async (id: number, newQuantity: number) => {
     if (newQuantity < 1) return
-    
+
     if (!isLoggedIn || !currentUser) {
       toast({
         title: "Login required",
@@ -78,29 +81,54 @@ export default function CartPage() {
       })
       return
     }
-    
-    // Update locally first
-    const updatedItems = cartItems.map((item) => 
-      item.id === id ? { ...item, quantity: newQuantity } : item
-    )
-    setCartItems(updatedItems)
-    
-    // Convert to service format and save to database
-    const serviceItems: ServiceCartItem[] = updatedItems.map(item => ({
-      id: item.productId || item.id.toString(),
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      image: item.image,
-      category: item.category
-    }))
-    
+
+    // Add loading state for this specific item
+    setUpdatingItems(prev => new Set(prev).add(id))
+
     try {
-      await CartService.saveCart(currentUser.email, serviceItems)
+      // Update locally first for immediate feedback
+      const updatedItems = cartItems.map((item) =>
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      )
+      setCartItems(updatedItems)
+
+      // Convert to service format and save to database
+      const serviceItems: ServiceCartItem[] = updatedItems.map(item => ({
+        id: item.productId || item.id.toString(),
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+        category: item.category
+      }))
+
+      try {
+        await CartService.saveCart(currentUser.email, serviceItems)
+      } catch (error) {
+        console.error('Failed to update cart:', error)
+        // Revert local changes on error
+        setCartItems(cartItems)
+        toast({
+          title: "Update failed",
+          description: "Failed to update cart. Please try again.",
+          variant: "destructive"
+        })
+      } finally {
+        // Remove loading state
+        setUpdatingItems(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(id)
+          return newSet
+        })
+      }
     } catch (error) {
-      console.error('Failed to update cart:', error)
-      // Revert local changes on error
-      setCartItems(cartItems)
+      console.error('Cart update error:', error)
+    } finally {
+      setUpdatingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
     }
   }
 
@@ -113,22 +141,25 @@ export default function CartPage() {
       })
       return
     }
-    
-    // Update locally first
-    const updatedItems = cartItems.filter((item) => item.id !== id)
-    setCartItems(updatedItems)
-    
-    // Convert to service format and save to database
-    const serviceItems: ServiceCartItem[] = updatedItems.map(item => ({
-      id: item.productId || item.id.toString(),
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      image: item.image,
-      category: item.category
-    }))
-    
+
+    // Add loading state for this specific item
+    setRemovingItems(prev => new Set(prev).add(id))
+
     try {
+      // Update locally first for immediate feedback
+      const updatedItems = cartItems.filter((item) => item.id !== id)
+      setCartItems(updatedItems)
+
+      // Convert to service format and save to database
+      const serviceItems: ServiceCartItem[] = updatedItems.map(item => ({
+        id: item.productId || item.id.toString(),
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+        category: item.category
+      }))
+
       await CartService.saveCart(currentUser.email, serviceItems)
       toast({
         title: "Item removed",
@@ -138,6 +169,18 @@ export default function CartPage() {
       console.error('Failed to remove item:', error)
       // Revert local changes on error
       setCartItems(cartItems)
+      toast({
+        title: "Remove failed",
+        description: "Failed to remove item. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      // Remove loading state
+      setRemovingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
     }
   }
 
@@ -177,10 +220,7 @@ export default function CartPage() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your cart...</p>
-          </div>
+          <LoadingSpinner size="lg" text="Loading your cart..." />
         </div>
       </div>
     )
@@ -252,8 +292,17 @@ export default function CartPage() {
                     </div>
 
                     <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => updateQuantity(item.id, item.quantity - 1)}>
-                        <Minus className="h-4 w-4" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        disabled={updatingItems.has(item.id) || removingItems.has(item.id)}
+                      >
+                        {updatingItems.has(item.id) ? (
+                          <LoadingSpinner size="sm" variant="inline" />
+                        ) : (
+                          <Minus className="h-4 w-4" />
+                        )}
                       </Button>
 
                       <Input
@@ -262,10 +311,20 @@ export default function CartPage() {
                         onChange={(e) => updateQuantity(item.id, Number.parseInt(e.target.value) || 1)}
                         className="w-16 text-center"
                         min="1"
+                        disabled={updatingItems.has(item.id) || removingItems.has(item.id)}
                       />
 
-                      <Button variant="outline" size="sm" onClick={() => updateQuantity(item.id, item.quantity + 1)}>
-                        <Plus className="h-4 w-4" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        disabled={updatingItems.has(item.id) || removingItems.has(item.id)}
+                      >
+                        {updatingItems.has(item.id) ? (
+                          <LoadingSpinner size="sm" variant="inline" />
+                        ) : (
+                          <Plus className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
 
@@ -276,8 +335,13 @@ export default function CartPage() {
                         size="sm"
                         onClick={() => removeItem(item.id)}
                         className="text-red-600 hover:text-red-700"
+                        disabled={removingItems.has(item.id) || updatingItems.has(item.id)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {removingItems.has(item.id) ? (
+                          <LoadingSpinner size="sm" variant="inline" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
