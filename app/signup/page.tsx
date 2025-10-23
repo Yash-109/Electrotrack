@@ -140,7 +140,7 @@ export default function SignUpPage() {
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
         toast({
           title: "Verification email sent! 📧",
@@ -183,7 +183,7 @@ export default function SignUpPage() {
                 <Alert>
                   <CheckCircle2 className="h-4 w-4" />
                   <AlertDescription>
-                    Welcome to Radhika Electronics! Your account for <strong>{verificationData?.email}</strong> 
+                    Welcome to Radhika Electronics! Your account for <strong>{verificationData?.email}</strong>
                     is ready to use.
                   </AlertDescription>
                 </Alert>
@@ -227,7 +227,7 @@ export default function SignUpPage() {
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl font-bold text-blue-600">Complete Registration</CardTitle>
                 <CardDescription>
-                  Email verified for <strong>{verificationData?.email}</strong>. 
+                  Email verified for <strong>{verificationData?.email}</strong>.
                   Now create your password to finish registration.
                 </CardDescription>
               </CardHeader>
@@ -242,8 +242,10 @@ export default function SignUpPage() {
                       onChange={(e) => handleInputChange("password", e.target.value)}
                       className={errors.password ? "border-red-500" : ""}
                       placeholder="Enter your password"
+                      aria-describedby={errors.password ? "password-error" : undefined}
+                      aria-invalid={errors.password ? "true" : "false"}
                     />
-                    {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+                    {errors.password && <p id="password-error" className="text-red-500 text-sm mt-1" role="alert">{errors.password}</p>}
                   </div>
 
                   <div>
@@ -255,13 +257,15 @@ export default function SignUpPage() {
                       onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
                       className={errors.confirmPassword ? "border-red-500" : ""}
                       placeholder="Confirm your password"
+                      aria-describedby={errors.confirmPassword ? "confirm-password-error" : undefined}
+                      aria-invalid={errors.confirmPassword ? "true" : "false"}
                     />
-                    {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
+                    {errors.confirmPassword && <p id="confirm-password-error" className="text-red-500 text-sm mt-1" role="alert">{errors.confirmPassword}</p>}
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
+                  <Button
+                    type="submit"
+                    className="w-full"
                     disabled={isLoading}
                   >
                     {isLoading ? (

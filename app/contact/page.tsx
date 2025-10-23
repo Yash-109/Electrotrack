@@ -157,13 +157,22 @@ export default function ContactPage() {
               <CardContent className="p-6">
                 <h3 className="font-semibold mb-4">Follow Us</h3>
                 <div className="flex space-x-4">
-                  <button className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <button
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    aria-label="Visit our Facebook page"
+                  >
                     <Facebook className="h-5 w-5" />
                   </button>
-                  <button className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <button
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    aria-label="Visit our Instagram profile"
+                  >
                     <Instagram className="h-5 w-5" />
                   </button>
-                  <button className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  <button
+                    className="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    aria-label="Visit our Twitter profile"
+                  >
                     <Twitter className="h-5 w-5" />
                   </button>
                 </div>
