@@ -25,7 +25,7 @@ export class CartService {
     if (!Array.isArray(items) || items.length === 0) {
       return 0
     }
-    
+
     return items.reduce((total, item) => {
       // Safety check for item properties
       const price = typeof item?.price === 'number' ? item.price : 0
@@ -62,7 +62,7 @@ export class CartService {
         const errorData = await response.text()
         // eslint-disable-next-line no-console
         console.error('Cart save failed:', response.status, errorData)
-        
+
         // Fallback to in-memory storage for development
         // eslint-disable-next-line no-console
         console.warn('Using fallback in-memory cart storage')
@@ -77,10 +77,15 @@ export class CartService {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving cart:', error)
-      
-      // Fallback to in-memory storage for development
+
+      // Check if it's a network error or server error
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch')
+      const errorType = isNetworkError ? 'Network Error' : 'Server Error'
+
       // eslint-disable-next-line no-console
-      console.warn('Using fallback in-memory cart storage due to error')
+      console.warn(`Cart save failed with ${errorType}, using fallback storage`)
+
+      // Fallback to in-memory storage for development
       this.fallbackStorage.set(userEmail, safeItems)
       return true
     }
@@ -95,12 +100,12 @@ export class CartService {
 
     try {
       const response = await fetch(`/api/cart/get?userEmail=${encodeURIComponent(userEmail)}`)
-      
+
       if (response.ok) {
         const data = await response.json()
         return data.items || []
       }
-      
+
       // Fallback to in-memory storage
       const fallbackItems = this.fallbackStorage.get(userEmail)
       if (fallbackItems) {
@@ -108,12 +113,12 @@ export class CartService {
         console.warn('Using fallback cart data for user:', userEmail)
         return fallbackItems
       }
-      
+
       return []
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error retrieving cart:', error)
-      
+
       // Fallback to in-memory storage
       const fallbackItems = this.fallbackStorage.get(userEmail)
       if (fallbackItems) {
@@ -121,7 +126,7 @@ export class CartService {
         console.warn('Using fallback cart data due to error for user:', userEmail)
         return fallbackItems
       }
-      
+
       return []
     }
   }
@@ -147,14 +152,14 @@ export class CartService {
         this.fallbackStorage.delete(userEmail)
         return true
       }
-      
+
       // If API fails, still clear fallback storage
       this.fallbackStorage.delete(userEmail)
       return true
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error clearing cart:', error)
-      
+
       // Clear fallback storage even if API fails
       this.fallbackStorage.delete(userEmail)
       return true

@@ -22,6 +22,9 @@ export default function GetStartedButton() {
                         setLocalUser(parsedUser.user)
                     } catch (error) {
                         console.error('Error parsing user session:', error)
+                        // Clear corrupted session data
+                        localStorage.removeItem("radhika_user_session")
+                        setLocalUser(null)
                     }
                 }
             }
