@@ -80,10 +80,10 @@ export default function ContactPage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-white py-16">
+      <section className="bg-white py-8 md:py-16">
         <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold text-gray-800 mb-4">Contact Us</h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-800 mb-4">Contact Us</h1>
+          <p className="text-base md:text-xl text-gray-600 max-w-2xl mx-auto">
             Get in touch with us for any questions, support, or electronics consultation. We're here to help you find
             the perfect solution.
           </p>

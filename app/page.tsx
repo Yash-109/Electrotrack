@@ -27,13 +27,13 @@ export default function HomePage() {
           <p className="text-xl md:text-2xl mb-8 opacity-90">
             Your trusted partner for premium electronics since years
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
             <GetStartedButton />
-            <Link href="/dashboard">
+            <Link href="/dashboard" className="w-full sm:w-auto">
               <Button
                 size="lg"
                 variant="outline"
-                className="text-white border-white hover:bg-white hover:text-blue-600 bg-transparent"
+                className="w-full sm:w-auto text-white border-white hover:bg-white hover:text-blue-600 bg-transparent"
               >
                 Shop Now
               </Button>
