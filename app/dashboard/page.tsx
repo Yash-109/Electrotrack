@@ -448,11 +448,12 @@ export default function DashboardPage() {
           variant: "destructive",
         })
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Add to cart error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       toast({
         title: "Failed to add to cart",
-        description: error.message || "Something went wrong. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
