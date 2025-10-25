@@ -1,3 +1,41 @@
+// Enhanced error types for better categorization
+export enum ErrorType {
+    VALIDATION = 'VALIDATION_ERROR',
+    AUTHENTICATION = 'AUTHENTICATION_ERROR',
+    AUTHORIZATION = 'AUTHORIZATION_ERROR',
+    NOT_FOUND = 'NOT_FOUND_ERROR',
+    NETWORK = 'NETWORK_ERROR',
+    DATABASE = 'DATABASE_ERROR',
+    EXTERNAL_SERVICE = 'EXTERNAL_SERVICE_ERROR',
+    INTERNAL = 'INTERNAL_ERROR'
+}
+
+// Custom error class with better context
+export class AppError extends Error {
+    public readonly type: ErrorType
+    public readonly statusCode: number
+    public readonly isOperational: boolean
+    public readonly timestamp: Date
+    public readonly context?: Record<string, any>
+
+    constructor(
+        message: string,
+        type: ErrorType = ErrorType.INTERNAL,
+        statusCode: number = 500,
+        isOperational: boolean = true,
+        context?: Record<string, any>
+    ) {
+        super(message)
+        this.type = type
+        this.statusCode = statusCode
+        this.isOperational = isOperational
+        this.timestamp = new Date()
+        this.context = context
+
+        Error.captureStackTrace(this, this.constructor)
+    }
+}
+
 // Simple logger utility to replace console logging
 export const logger = {
     info: (message: string, data?: any) => {
@@ -52,16 +90,47 @@ export const ApiResponse = {
     })
 }
 
-// Sanitize errors for client responses
-export function sanitizeError(error: any): string {
+// Sanitize errors for client responses with better categorization
+export function sanitizeError(error: unknown): { message: string; type: string } {
+    if (error instanceof AppError) {
+        return {
+            message: error.message,
+            type: error.type
+        }
+    }
+
     if (process.env.NODE_ENV === 'development') {
-        return error?.message || 'An error occurred'
+        const message = error instanceof Error ? error.message : 'An error occurred'
+        return {
+            message,
+            type: ErrorType.INTERNAL
+        }
     }
 
     // In production, return generic messages for security
-    if (error?.code === 11000) {
-        return 'Duplicate data found'
+    if (error && typeof error === 'object' && 'code' in error) {
+        switch ((error as any).code) {
+            case 11000:
+                return {
+                    message: 'Duplicate data found',
+                    type: ErrorType.VALIDATION
+                }
+            case 'ENOTFOUND':
+            case 'ECONNREFUSED':
+                return {
+                    message: 'Service temporarily unavailable',
+                    type: ErrorType.NETWORK
+                }
+            default:
+                return {
+                    message: 'Internal server error',
+                    type: ErrorType.INTERNAL
+                }
+        }
     }
 
-    return 'Internal server error'
+    return {
+        message: 'Internal server error',
+        type: ErrorType.INTERNAL
+    }
 }
