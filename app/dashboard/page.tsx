@@ -487,75 +487,84 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-800 mb-4">Our Electronics Collection</h1>
 
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-1">
+          <div className="flex flex-col gap-4 mb-6">
+            {/* Search Bar */}
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                aria-label="Search products"
               />
             </div>
 
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full md:w-48">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    {category.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Filter Controls */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger className="w-full sm:flex-1" aria-label="Select category">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.value} value={category.value}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="name">Sort by Name</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-                <SelectItem value="rating">Highest Rated</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:flex-1" aria-label="Sort products">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Sort by Name</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                  <SelectItem value="rating">Highest Rated</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredProducts.map((product) => (
-            <Card key={product.id} className="hover:shadow-lg transition-shadow">
+            <Card key={product.id} className="hover:shadow-lg transition-shadow focus-within:shadow-lg">
               <CardHeader className="p-0">
                 <div className="relative bg-gray-50 rounded-t-lg overflow-hidden">
                   <img
                     src={product.image || "/placeholder.svg"}
-                    alt={product.name}
+                    alt={`Image of ${product.name}`}
                     className="w-full h-48 object-contain p-4 hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
                   />
                   {product.originalPrice > product.price && (
-                    <Badge className="absolute top-2 left-2 bg-red-500">
+                    <Badge
+                      className="absolute top-2 left-2 bg-red-500"
+                      aria-label={`${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% discount`}
+                    >
                       {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
                     </Badge>
                   )}
                   {!product.inStock && (
-                    <Badge variant="secondary" className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="absolute top-2 right-2" aria-label="Out of stock">
                       Out of Stock
                     </Badge>
                   )}
                 </div>
               </CardHeader>
 
-              <CardContent className="p-4">
-                <CardTitle className="text-lg mb-2">{product.name}</CardTitle>
-                <CardDescription className="mb-3">{product.description}</CardDescription>
+              <CardContent className="p-3 sm:p-4">
+                <CardTitle className="text-base sm:text-lg mb-2 line-clamp-2">{product.name}</CardTitle>
+                <CardDescription className="mb-3 text-sm line-clamp-2">{product.description}</CardDescription>
 
                 <div className="flex items-center mb-3">
-                  <div className="flex items-center">
+                  <div className="flex items-center" role="img" aria-label={`Rating: ${product.rating} out of 5 stars`}>
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                     <span className="ml-1 text-sm font-medium">{product.rating}</span>
                     <span className="ml-1 text-sm text-gray-600">({product.reviews} reviews)</span>
@@ -564,7 +573,7 @@ export default function DashboardPage() {
 
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="text-2xl font-bold text-blue-600">₹{product.price.toLocaleString()}</span>
+                    <span className="text-lg sm:text-2xl font-bold text-blue-600">₹{product.price.toLocaleString()}</span>
                     {product.originalPrice > product.price && (
                       <span className="ml-2 text-sm text-gray-500 line-through">
                         ₹{product.originalPrice.toLocaleString()}
@@ -574,9 +583,10 @@ export default function DashboardPage() {
                 </div>
 
                 <Button
-                  className="w-full"
+                  className="w-full text-sm sm:text-base"
                   onClick={() => addToCart(product)}
                   disabled={!product.inStock || addingToCart === product.id}
+                  aria-label={`Add ${product.name} to cart`}
                 >
                   {addingToCart === product.id ? (
                     <LoadingSpinner size="sm" variant="inline" text="Adding..." />
