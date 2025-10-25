@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -360,26 +360,30 @@ export default function DashboardPage() {
     { value: "laptops", label: "Laptops" },
   ]
 
-  const filteredProducts = products
-    .filter(
-      (product) =>
-        (selectedCategory === "all" || product.category === selectedCategory) &&
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price-low":
-          return a.price - b.price
-        case "price-high":
-          return b.price - a.price
-        case "rating":
-          return b.rating - a.rating
-        default:
-          return a.name.localeCompare(b.name)
-      }
-    })
+  // Memoize filtered and sorted products for better performance
+  const filteredProducts = useMemo(() => {
+    return products
+      .filter(
+        (product) =>
+          (selectedCategory === "all" || product.category === selectedCategory) &&
+          product.name.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "price-low":
+            return a.price - b.price
+          case "price-high":
+            return b.price - a.price
+          case "rating":
+            return b.rating - a.rating
+          default:
+            return a.name.localeCompare(b.name)
+        }
+      })
+  }, [selectedCategory, searchTerm, sortBy])
 
-  const addToCart = async (product: (typeof products)[0]) => {
+  // Memoize addToCart function to prevent unnecessary re-renders
+  const addToCart = useCallback(async (product: (typeof products)[0]) => {
     if (!isLoggedIn || !currentUser) {
       toast({
         title: "Login required",
@@ -460,7 +464,7 @@ export default function DashboardPage() {
       // Clear loading state
       setAddingToCart(null)
     }
-  }
+  }, [isLoggedIn, currentUser, toast, router]) // Dependencies for useCallback
 
   // Show loading while checking authentication
   if (isLoading) {

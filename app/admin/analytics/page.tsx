@@ -1,32 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense, lazy } from "react"
 import { AdminRouteGuard } from "@/components/admin-route-guard"
 import { AdminHeader } from "@/components/admin-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users, BarChart3, LineChart, PieChart } from "lucide-react"
-import { 
-  LineChart as RechartsLineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer,
-  PieChart as RechartsPieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  Legend
-} from 'recharts'
-import { useTransactionStore } from "@/lib/transaction-store"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users } from "lucide-react"
 
-// Chart colors
+// Lazy load the chart components to improve initial page load
+const ChartComponents = lazy(() => import("@/components/admin/chart-components").then(module => ({
+  default: module.ChartComponents
+})))
+
+import { useTransactionStore } from "@/lib/transaction-store"// Chart colors
 const COLORS = {
   revenue: '#10b981',
-  expenses: '#ef4444', 
+  expenses: '#ef4444',
   profit: '#3b82f6'
 }
 
@@ -36,7 +26,7 @@ interface AnalyticsData {
   totalRevenue: number
   totalExpenses: number
   totalProfit: number
-  totalOrders: number 
+  totalOrders: number
   totalProducts: number
   totalUsers: number
   activeSessions: number
@@ -78,7 +68,7 @@ export default function AdminAnalytics() {
   const processAnalytics = () => {
     try {
       const stats = getStats()
-      
+
       // Generate chart data
       const chartData = [
         { name: 'Revenue', value: stats.totalRevenue, color: COLORS.revenue },
@@ -94,7 +84,7 @@ export default function AdminAnalytics() {
 
       // Generate monthly trend data (last 6 months)
       const monthlyData = generateMonthlyTrends(transactions)
-      
+
       const analyticsData: AnalyticsData = {
         totalRevenue: stats.totalRevenue,
         totalExpenses: stats.totalExpenses,
@@ -112,7 +102,7 @@ export default function AdminAnalytics() {
         pieData,
         monthlyData
       }
-      
+
       setData(analyticsData)
     } catch (error) {
       console.error('Analytics processing error:', error)
@@ -136,7 +126,7 @@ export default function AdminAnalytics() {
 
   const generateMonthlyTrends = (transactions: any[]) => {
     const monthlyStats: { [key: string]: { revenue: number; expenses: number; profit: number; month: string } } = {}
-    
+
     // Initialize last 6 months
     for (let i = 5; i >= 0; i--) {
       const date = new Date()
@@ -145,11 +135,11 @@ export default function AdminAnalytics() {
       const monthName = date.toLocaleDateString('en-US', { month: 'short' })
       monthlyStats[monthKey] = { revenue: 0, expenses: 0, profit: 0, month: monthName }
     }
-    
+
     transactions.forEach(transaction => {
       const date = new Date(transaction.date)
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      
+
       if (monthlyStats[monthKey]) {
         if (transaction.type === 'income') {
           monthlyStats[monthKey].revenue += transaction.amount
@@ -159,7 +149,7 @@ export default function AdminAnalytics() {
         monthlyStats[monthKey].profit = monthlyStats[monthKey].revenue - monthlyStats[monthKey].expenses
       }
     })
-    
+
     return Object.values(monthlyStats)
   }
 
@@ -204,7 +194,7 @@ export default function AdminAnalytics() {
       <AdminHeader />
       <div className="p-6 space-y-6">
         <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-        
+
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
           <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -291,21 +281,21 @@ export default function AdminAnalytics() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis 
-                      dataKey="name" 
+                    <XAxis
+                      dataKey="name"
                       fontSize={12}
                       tick={{ fill: '#666' }}
                     />
-                    <YAxis 
-                      tickFormatter={(value) => `₹${(value/1000).toFixed(0)}K`}
+                    <YAxis
+                      tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
                       fontSize={12}
                       tick={{ fill: '#666' }}
                     />
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
                       labelStyle={{ color: '#000', fontWeight: 'bold' }}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
+                      contentStyle={{
+                        backgroundColor: '#fff',
                         border: '1px solid #ccc',
                         borderRadius: '8px',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
@@ -340,7 +330,7 @@ export default function AdminAnalytics() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }: { name: string; percent?: number }) => 
+                      label={({ name, percent }: { name: string; percent?: number }) =>
                         `${name} ${percent ? (percent * 100).toFixed(0) : '0'}%`
                       }
                       outerRadius={120}
@@ -351,16 +341,16 @@ export default function AdminAnalytics() {
                         <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip 
+                    <Tooltip
                       formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
+                      contentStyle={{
+                        backgroundColor: '#fff',
                         border: '1px solid #ccc',
                         borderRadius: '8px',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                       }}
                     />
-                    <Legend 
+                    <Legend
                       wrapperStyle={{ paddingTop: '20px' }}
                       iconType="circle"
                     />
@@ -385,52 +375,52 @@ export default function AdminAnalytics() {
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsLineChart data={data.monthlyData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis 
-                    dataKey="month" 
+                  <XAxis
+                    dataKey="month"
                     fontSize={12}
                     tick={{ fill: '#666' }}
                   />
-                  <YAxis 
-                    tickFormatter={(value) => `₹${(value/1000).toFixed(0)}K`}
+                  <YAxis
+                    tickFormatter={(value) => `₹${(value / 1000).toFixed(0)}K`}
                     fontSize={12}
                     tick={{ fill: '#666' }}
                   />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [`₹${value.toLocaleString()}`, '']}
                     labelStyle={{ color: '#000', fontWeight: 'bold' }}
-                    contentStyle={{ 
-                      backgroundColor: '#fff', 
+                    contentStyle={{
+                      backgroundColor: '#fff',
                       border: '1px solid #ccc',
                       borderRadius: '8px',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                     }}
                   />
-                  <Legend 
+                  <Legend
                     wrapperStyle={{ paddingTop: '20px' }}
                     iconType="line"
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke={COLORS.revenue} 
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke={COLORS.revenue}
                     strokeWidth={4}
                     name="Revenue"
                     dot={{ fill: COLORS.revenue, strokeWidth: 2, r: 6 }}
                     activeDot={{ r: 8, strokeWidth: 2 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="expenses" 
-                    stroke={COLORS.expenses} 
+                  <Line
+                    type="monotone"
+                    dataKey="expenses"
+                    stroke={COLORS.expenses}
                     strokeWidth={4}
                     name="Expenses"
                     dot={{ fill: COLORS.expenses, strokeWidth: 2, r: 6 }}
                     activeDot={{ r: 8, strokeWidth: 2 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="profit" 
-                    stroke={COLORS.profit} 
+                  <Line
+                    type="monotone"
+                    dataKey="profit"
+                    stroke={COLORS.profit}
                     strokeWidth={4}
                     name="Profit"
                     dot={{ fill: COLORS.profit, strokeWidth: 2, r: 6 }}
