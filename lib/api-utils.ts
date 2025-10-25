@@ -1,3 +1,5 @@
+import { logger as appLogger } from './logger'
+
 // Enhanced error types for better categorization
 export enum ErrorType {
     VALIDATION = 'VALIDATION_ERROR',
@@ -41,11 +43,13 @@ export const logger = {
     info: (message: string, data?: any) => {
         if (process.env.NODE_ENV === 'development') {
             console.log(`[INFO] ${message}`, data || '')
+            appLogger.info(message, data, 'API')
         }
     },
 
     error: (message: string, error?: any) => {
         console.error(`[ERROR] ${message}`, process.env.NODE_ENV === 'development' ? error : '')
+        appLogger.error(message, error, 'API')
     },
 
     warn: (message: string, data?: any) => {

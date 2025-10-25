@@ -47,7 +47,7 @@ function OrderSuccessContent() {
                 if (user) {
                   try {
                     await CartService.clearCart(user.email)
-                    console.log('Cart cleared after successful order')
+                    // Cart cleared successfully after order
                   } catch (error) {
                     console.error('Failed to clear cart after order:', error)
                   }

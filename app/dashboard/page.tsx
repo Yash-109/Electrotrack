@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { log } from "@/lib/logger"
 import { ShoppingCart, Star, Search, Filter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
@@ -453,7 +454,7 @@ export default function DashboardPage() {
         })
       }
     } catch (error: unknown) {
-      console.error('Add to cart error:', error)
+      log.componentError('Dashboard addToCart', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
       toast({
         title: "Failed to add to cart",
