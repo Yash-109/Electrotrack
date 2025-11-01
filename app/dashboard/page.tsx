@@ -342,6 +342,7 @@ const products = [
 ]
 
 export default function DashboardPage() {
+  // State management for search, filtering, and cart operations
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("name")
