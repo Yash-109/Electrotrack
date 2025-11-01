@@ -626,9 +626,31 @@ export default function DashboardPage() {
         </div>
 
         {filteredProducts.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No products found matching your criteria.</p>
-          </div>
+          <Card className="text-center py-12 max-w-md mx-auto">
+            <CardContent className="p-8">
+              <div className="mb-4">
+                <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">No products found</h3>
+              <p className="text-gray-500 mb-4">
+                {searchTerm || selectedCategory !== "all"
+                  ? "Try adjusting your search or filter criteria."
+                  : "No products available at the moment."}
+              </p>
+              {(searchTerm || selectedCategory !== "all") && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm("")
+                    setSelectedCategory("all")
+                  }}
+                  className="mt-2"
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
