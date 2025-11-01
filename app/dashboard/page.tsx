@@ -487,6 +487,28 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-4">Our Electronics Collection</h1>
 
+          {/* Dashboard Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-blue-600">{products.length}</div>
+                <p className="text-sm text-gray-600">Total Products</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-green-600">{categories.length - 1}</div>
+                <p className="text-sm text-gray-600">Categories</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-purple-600">{filteredProducts.length}</div>
+                <p className="text-sm text-gray-600">Filtered Results</p>
+              </CardContent>
+            </Card>
+          </div>
+
           {/* Filters */}
           <div className="flex flex-col gap-4 mb-6">
             {/* Search Bar */}
