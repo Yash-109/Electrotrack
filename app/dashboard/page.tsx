@@ -346,6 +346,7 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("name")
+  const [priceRange, setPriceRange] = useState({ min: 0, max: 150000 })
   const [addingToCart, setAddingToCart] = useState<number | null>(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
@@ -368,7 +369,9 @@ export default function DashboardPage() {
       .filter(
         (product) =>
           (selectedCategory === "all" || product.category === selectedCategory) &&
-          product.name.toLowerCase().includes(searchTerm.toLowerCase()),
+          product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          product.price >= priceRange.min &&
+          product.price <= priceRange.max,
       )
       .sort((a, b) => {
         switch (sortBy) {
@@ -382,7 +385,7 @@ export default function DashboardPage() {
             return a.name.localeCompare(b.name)
         }
       })
-  }, [selectedCategory, searchTerm, sortBy])
+  }, [selectedCategory, searchTerm, sortBy, priceRange])
 
   // Memoize addToCart function to prevent unnecessary re-renders
   const addToCart = useCallback(async (product: (typeof products)[0]) => {
@@ -552,6 +555,37 @@ export default function DashboardPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Price Range Filter */}
+            <div className="flex flex-col sm:flex-row gap-3 items-end">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Min Price</label>
+                <Input
+                  type="number"
+                  placeholder="Min ₹"
+                  value={priceRange.min}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, min: parseInt(e.target.value) || 0 }))}
+                  className="w-full"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Max Price</label>
+                <Input
+                  type="number"
+                  placeholder="Max ₹"
+                  value={priceRange.max}
+                  onChange={(e) => setPriceRange(prev => ({ ...prev, max: parseInt(e.target.value) || 150000 }))}
+                  className="w-full"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setPriceRange({ min: 0, max: 150000 })}
+                className="whitespace-nowrap"
+              >
+                Reset Price
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -634,16 +668,17 @@ export default function DashboardPage() {
               </div>
               <h3 className="text-lg font-semibold text-gray-700 mb-2">No products found</h3>
               <p className="text-gray-500 mb-4">
-                {searchTerm || selectedCategory !== "all"
+                {searchTerm || selectedCategory !== "all" || priceRange.min > 0 || priceRange.max < 150000
                   ? "Try adjusting your search or filter criteria."
                   : "No products available at the moment."}
               </p>
-              {(searchTerm || selectedCategory !== "all") && (
+              {(searchTerm || selectedCategory !== "all" || priceRange.min > 0 || priceRange.max < 150000) && (
                 <Button
                   variant="outline"
                   onClick={() => {
                     setSearchTerm("")
                     setSelectedCategory("all")
+                    setPriceRange({ min: 0, max: 150000 })
                   }}
                   className="mt-2"
                 >
