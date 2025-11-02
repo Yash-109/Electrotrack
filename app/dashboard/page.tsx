@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { log } from "@/lib/logger"
-import { ShoppingCart, Star, Search, Filter } from "lucide-react"
+import { ShoppingCart, Star, Search, Filter, Heart } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
@@ -349,6 +349,7 @@ export default function DashboardPage() {
   const [priceRange, setPriceRange] = useState({ min: 0, max: 150000 })
   const [addingToCart, setAddingToCart] = useState<number | null>(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
+  const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -470,6 +471,36 @@ export default function DashboardPage() {
       setAddingToCart(null)
     }
   }, [isLoggedIn, currentUser, toast, router]) // Dependencies for useCallback
+
+  // Load favorites from localStorage on component mount
+  useEffect(() => {
+    const savedFavorites = localStorage.getItem('electrotrack-favorites')
+    if (savedFavorites) {
+      try {
+        const favoritesArray = JSON.parse(savedFavorites)
+        setFavorites(new Set(favoritesArray))
+      } catch (error) {
+        console.error('Error loading favorites:', error)
+      }
+    }
+  }, [])
+
+  // Toggle favorite status
+  const toggleFavorite = useCallback((productId: number) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev)
+      if (newFavorites.has(productId)) {
+        newFavorites.delete(productId)
+      } else {
+        newFavorites.add(productId)
+      }
+
+      // Save to localStorage
+      localStorage.setItem('electrotrack-favorites', JSON.stringify(Array.from(newFavorites)))
+
+      return newFavorites
+    })
+  }, [])
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -614,6 +645,23 @@ export default function DashboardPage() {
                       Out of Stock
                     </Badge>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute bottom-2 right-2 h-8 w-8 p-0 bg-white/80 hover:bg-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleFavorite(product.id)
+                    }}
+                    aria-label={favorites.has(product.id) ? "Remove from favorites" : "Add to favorites"}
+                  >
+                    <Heart
+                      className={`h-4 w-4 ${favorites.has(product.id)
+                          ? "fill-red-500 text-red-500"
+                          : "text-gray-600 hover:text-red-500"
+                        }`}
+                    />
+                  </Button>
                 </div>
               </CardHeader>
 
