@@ -351,6 +351,8 @@ export default function DashboardPage() {
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [compareList, setCompareList] = useState<number[]>([])
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
+  const [searchHistory, setSearchHistory] = useState<string[]>([])
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -484,6 +486,17 @@ export default function DashboardPage() {
         console.error('Error loading favorites:', error)
       }
     }
+
+    // Load search history
+    const savedHistory = localStorage.getItem('electrotrack-search-history')
+    if (savedHistory) {
+      try {
+        const historyArray = JSON.parse(savedHistory)
+        setSearchHistory(historyArray)
+      } catch (error) {
+        console.error('Error loading search history:', error)
+      }
+    }
   }, [])
 
   // Toggle favorite status
@@ -525,6 +538,53 @@ export default function DashboardPage() {
   const comparedProducts = useMemo(() => {
     return products.filter(product => compareList.includes(product.id))
   }, [compareList])
+
+  // Generate search suggestions
+  const searchSuggestions = useMemo(() => {
+    if (!searchTerm || searchTerm.length < 1) {
+      return searchHistory.slice(0, 5)
+    }
+
+    const productSuggestions = products
+      .filter(product =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.category.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .slice(0, 5)
+      .map(product => product.name)
+
+    const categorySuggestions = categories
+      .filter(cat =>
+        cat.label.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        cat.value !== "all"
+      )
+      .map(cat => cat.label)
+
+    return [...new Set([...productSuggestions, ...categorySuggestions])]
+  }, [searchTerm, searchHistory])
+
+  // Handle search selection
+  const handleSearchSelect = useCallback((selectedTerm: string) => {
+    setSearchTerm(selectedTerm)
+    setShowSearchSuggestions(false)
+
+    // Add to search history
+    const newHistory = [selectedTerm, ...searchHistory.filter(item => item !== selectedTerm)].slice(0, 10)
+    setSearchHistory(newHistory)
+    localStorage.setItem('electrotrack-search-history', JSON.stringify(newHistory))
+  }, [searchHistory])
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm && searchTerm.length >= 2) {
+        // This would be where you'd call an API for search analytics
+        console.log('Searching for:', searchTerm)
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -572,14 +632,51 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-4 mb-6">
             {/* Search Bar */}
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
               <Input
                 placeholder="Search products..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setShowSearchSuggestions(true)
+                }}
+                onFocus={() => setShowSearchSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 150)}
                 className="pl-10"
                 aria-label="Search products"
               />
+
+              {/* Search Suggestions Dropdown */}
+              {showSearchSuggestions && searchSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {searchTerm.length === 0 && searchHistory.length > 0 && (
+                    <div className="px-3 py-2 text-xs text-gray-500 border-b">Recent Searches</div>
+                  )}
+                  {searchSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      onClick={() => handleSearchSelect(suggestion)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Search className="h-3 w-3 text-gray-400" />
+                        <span className="text-sm">
+                          {searchTerm && suggestion.toLowerCase().includes(searchTerm.toLowerCase()) ? (
+                            <>
+                              {suggestion.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, i) =>
+                                part.toLowerCase() === searchTerm.toLowerCase() ?
+                                  <mark key={i} className="bg-yellow-200">{part}</mark> : part
+                              )}
+                            </>
+                          ) : (
+                            suggestion
+                          )}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Filter Controls */}
@@ -698,8 +795,8 @@ export default function DashboardPage() {
                   >
                     <GitCompare
                       className={`h-4 w-4 ${compareList.includes(product.id)
-                          ? "text-blue-600"
-                          : "text-gray-600 hover:text-blue-600"
+                        ? "text-blue-600"
+                        : "text-gray-600 hover:text-blue-600"
                         }`}
                     />
                   </Button>
