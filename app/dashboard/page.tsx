@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { log } from "@/lib/logger"
-import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X } from "lucide-react"
+import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
@@ -353,6 +354,7 @@ export default function DashboardPage() {
   const [compareList, setCompareList] = useState<number[]>([])
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
   const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [quickViewProduct, setQuickViewProduct] = useState<typeof products[0] | null>(null)
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -800,6 +802,18 @@ export default function DashboardPage() {
                         }`}
                     />
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute bottom-2 right-22 h-8 w-8 p-0 bg-white/80 hover:bg-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setQuickViewProduct(product)
+                    }}
+                    aria-label="Quick view product details"
+                  >
+                    <Eye className="h-4 w-4 text-gray-600 hover:text-blue-600" />
+                  </Button>
                 </div>
               </CardHeader>
 
@@ -934,6 +948,125 @@ export default function DashboardPage() {
           </Card>
         </div>
       )}
+
+      {/* Quick View Modal */}
+      <Dialog open={!!quickViewProduct} onOpenChange={() => setQuickViewProduct(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          {quickViewProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">{quickViewProduct.name}</DialogTitle>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Product Image */}
+                <div className="space-y-4">
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <img
+                      src={quickViewProduct.image}
+                      alt={quickViewProduct.name}
+                      className="w-full h-64 object-contain"
+                    />
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleFavorite(quickViewProduct.id)}
+                      className="flex-1"
+                    >
+                      <Heart className={`h-4 w-4 mr-2 ${favorites.has(quickViewProduct.id) ? "fill-red-500 text-red-500" : ""}`} />
+                      {favorites.has(quickViewProduct.id) ? "Favorited" : "Add to Favorites"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleCompare(quickViewProduct.id)}
+                      className="flex-1"
+                    >
+                      <GitCompare className={`h-4 w-4 mr-2 ${compareList.includes(quickViewProduct.id) ? "text-blue-600" : ""}`} />
+                      {compareList.includes(quickViewProduct.id) ? "In Comparison" : "Compare"}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Product Details */}
+                <div className="space-y-6">
+                  {/* Price and Rating */}
+                  <div>
+                    <div className="flex items-center gap-4 mb-3">
+                      <span className="text-3xl font-bold text-blue-600">₹{quickViewProduct.price.toLocaleString()}</span>
+                      {quickViewProduct.originalPrice > quickViewProduct.price && (
+                        <span className="text-lg text-gray-500 line-through">
+                          ₹{quickViewProduct.originalPrice.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="ml-1 font-medium">{quickViewProduct.rating}</span>
+                      </div>
+                      <span className="text-gray-600">({quickViewProduct.reviews} reviews)</span>
+                      <Badge variant={quickViewProduct.inStock ? "default" : "secondary"}>
+                        {quickViewProduct.inStock ? "In Stock" : "Out of Stock"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <h3 className="font-semibold mb-2">Description</h3>
+                    <p className="text-gray-600">{quickViewProduct.description}</p>
+                  </div>
+
+                  {/* Specifications */}
+                  <div>
+                    <h3 className="font-semibold mb-2">Specifications</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Category:</span>
+                        <span className="capitalize">{quickViewProduct.category}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Product ID:</span>
+                        <span>#{quickViewProduct.id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Availability:</span>
+                        <span className={quickViewProduct.inStock ? "text-green-600" : "text-red-600"}>
+                          {quickViewProduct.inStock ? "In Stock" : "Out of Stock"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Add to Cart */}
+                  <Button
+                    className="w-full"
+                    onClick={() => {
+                      addToCart(quickViewProduct)
+                      setQuickViewProduct(null)
+                    }}
+                    disabled={!quickViewProduct.inStock || addingToCart === quickViewProduct.id}
+                  >
+                    {addingToCart === quickViewProduct.id ? (
+                      <LoadingSpinner size="sm" variant="inline" text="Adding..." />
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-4 w-4 mr-2" />
+                        {quickViewProduct.inStock ? "Add to Cart" : "Out of Stock"}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
