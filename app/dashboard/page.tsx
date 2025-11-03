@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { log } from "@/lib/logger"
-import { ShoppingCart, Star, Search, Filter, Heart } from "lucide-react"
+import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
@@ -350,6 +350,7 @@ export default function DashboardPage() {
   const [addingToCart, setAddingToCart] = useState<number | null>(null)
   const [loadingProducts, setLoadingProducts] = useState(false)
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
+  const [compareList, setCompareList] = useState<number[]>([])
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -501,6 +502,29 @@ export default function DashboardPage() {
       return newFavorites
     })
   }, [])
+
+  // Toggle product in comparison list
+  const toggleCompare = useCallback((productId: number) => {
+    setCompareList(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId)
+      } else if (prev.length < 3) {
+        return [...prev, productId]
+      } else {
+        toast({
+          title: "Maximum comparison limit",
+          description: "You can compare up to 3 products at once.",
+          variant: "destructive",
+        })
+        return prev
+      }
+    })
+  }, [toast])
+
+  // Get compared products
+  const comparedProducts = useMemo(() => {
+    return products.filter(product => compareList.includes(product.id))
+  }, [compareList])
 
   // Show loading while checking authentication
   if (isLoading) {
@@ -657,8 +681,25 @@ export default function DashboardPage() {
                   >
                     <Heart
                       className={`h-4 w-4 ${favorites.has(product.id)
-                          ? "fill-red-500 text-red-500"
-                          : "text-gray-600 hover:text-red-500"
+                        ? "fill-red-500 text-red-500"
+                        : "text-gray-600 hover:text-red-500"
+                        }`}
+                    />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute bottom-2 right-12 h-8 w-8 p-0 bg-white/80 hover:bg-white"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleCompare(product.id)
+                    }}
+                    aria-label={compareList.includes(product.id) ? "Remove from comparison" : "Add to comparison"}
+                  >
+                    <GitCompare
+                      className={`h-4 w-4 ${compareList.includes(product.id)
+                          ? "text-blue-600"
+                          : "text-gray-600 hover:text-blue-600"
                         }`}
                     />
                   </Button>
@@ -737,6 +778,65 @@ export default function DashboardPage() {
           </Card>
         )}
       </div>
+
+      {/* Floating Comparison Bar */}
+      {compareList.length > 0 && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <Card className="shadow-lg border-2 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <GitCompare className="h-5 w-5 text-blue-600" />
+                  <span className="font-medium text-sm">Compare ({compareList.length}/3)</span>
+                </div>
+
+                <div className="flex gap-2">
+                  {comparedProducts.map((product) => (
+                    <div key={product.id} className="relative">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-12 h-12 object-contain rounded border"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute -top-2 -right-2 h-5 w-5 p-0 bg-red-500 hover:bg-red-600 text-white rounded-full"
+                        onClick={() => toggleCompare(product.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {compareList.length >= 2 && (
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => {
+                      toast({
+                        title: "Comparison Feature",
+                        description: "Detailed comparison page would open here with side-by-side specs.",
+                      })
+                    }}
+                  >
+                    Compare Now
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCompareList([])}
+                >
+                  Clear All
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
