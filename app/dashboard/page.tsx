@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback, useEffect } from "react"
+import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -358,6 +358,35 @@ export default function DashboardPage() {
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
+
+  // Accessibility: keep track of previously focused element so focus can be restored
+  const previouslyFocusedElement = useRef<HTMLElement | null>(null)
+
+  // Close quick view on Escape and restore focus
+  useEffect(() => {
+    if (!quickViewProduct) return
+
+    // store previously focused element
+    previouslyFocusedElement.current = document.activeElement as HTMLElement | null
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setQuickViewProduct(null)
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown)
+      // restore focus to previous element if available
+      try {
+        previouslyFocusedElement.current?.focus()
+      } catch (err) {
+        // ignore focus restore errors
+      }
+    }
+  }, [quickViewProduct])
 
   const categories = [
     { value: "all", label: "All Products" },
