@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { log } from "@/lib/logger"
+import Image from "next/image"
 import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X, Eye } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
@@ -778,11 +779,14 @@ export default function DashboardPage() {
             <Card key={product.id} className="hover:shadow-lg transition-shadow focus-within:shadow-lg">
               <CardHeader className="p-0">
                 <div className="relative bg-gray-50 rounded-t-lg overflow-hidden">
-                  <img
+                  <Image
                     src={product.image || "/placeholder.svg"}
                     alt={`Image of ${product.name}`}
                     className="w-full h-48 object-contain p-4 hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
+                    width={600}
+                    height={288}
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    priority={false}
                   />
                   {product.originalPrice > product.price && (
                     <Badge
@@ -933,10 +937,12 @@ export default function DashboardPage() {
                 <div className="flex gap-2">
                   {comparedProducts.map((product) => (
                     <div key={product.id} className="relative">
-                      <img
+                      <Image
                         src={product.image}
                         alt={product.name}
                         className="w-12 h-12 object-contain rounded border"
+                        width={48}
+                        height={48}
                       />
                       <Button
                         variant="ghost"
@@ -991,10 +997,13 @@ export default function DashboardPage() {
                 {/* Product Image */}
                 <div className="space-y-4">
                   <div className="bg-gray-50 rounded-lg p-6">
-                    <img
+                    <Image
                       src={quickViewProduct.image}
                       alt={quickViewProduct.name}
                       className="w-full h-64 object-contain"
+                      width={800}
+                      height={512}
+                      priority={false}
                     />
                   </div>
 
