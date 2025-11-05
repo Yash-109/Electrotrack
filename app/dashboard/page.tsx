@@ -707,9 +707,17 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Skip to content link for accessibility */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-blue-600 text-white px-4 py-2 rounded-md z-50"
+      >
+        Skip to main content
+      </a>
+
       <Header />
 
-      <div className="container mx-auto px-4 py-8">
+      <main id="main-content" className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-4">Our Electronics Collection</h1>
 
@@ -739,7 +747,7 @@ export default function DashboardPage() {
           <div className="flex flex-col gap-4 mb-6">
             {/* Search Bar */}
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" aria-hidden="true" />
               <Input
                 placeholder="Search products..."
                 value={searchTerm}
@@ -749,21 +757,38 @@ export default function DashboardPage() {
                 }}
                 onFocus={() => setShowSearchSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 150)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setShowSearchSuggestions(false)
+                    e.currentTarget.blur()
+                  }
+                }}
                 className="pl-10"
-                aria-label="Search products"
+                aria-label="Search products by name, category, or description"
+                aria-expanded={showSearchSuggestions && searchSuggestions.length > 0}
+                aria-haspopup="listbox"
+                aria-autocomplete="list"
+                role="combobox"
               />
 
               {/* Search Suggestions Dropdown */}
               {showSearchSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                <div
+                  className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto"
+                  role="listbox"
+                  aria-label="Search suggestions"
+                >
                   {searchTerm.length === 0 && searchHistory.length > 0 && (
-                    <div className="px-3 py-2 text-xs text-gray-500 border-b">Recent Searches</div>
+                    <div className="px-3 py-2 text-xs text-gray-500 border-b" role="presentation">Recent Searches</div>
                   )}
                   {searchSuggestions.map((suggestion, index) => (
                     <button
                       key={index}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 focus:bg-gray-50 border-b border-gray-100 last:border-b-0"
                       onClick={() => handleSearchSelect(suggestion)}
+                      role="option"
+                      aria-selected={false}
+                      tabIndex={showSearchSuggestions ? 0 : -1}
                     >
                       <div className="flex items-center gap-2">
                         <Search className="h-3 w-3 text-gray-400" />
@@ -849,9 +874,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product) => (
-            <Card key={product.id} className="hover:shadow-lg transition-shadow focus-within:shadow-lg">
+        <div
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          role="region"
+          aria-label="Products listing"
+          aria-live="polite"
+          aria-busy={loadingProducts}
+        >
+          {filteredProducts.map((product, index) => (
+            <Card
+              key={product.id}
+              className="hover:shadow-lg transition-shadow focus-within:shadow-lg"
+              tabIndex={0}
+              role="article"
+              aria-labelledby={`product-title-${product.id}`}
+            >
               <CardHeader className="p-0">
                 <div className="relative bg-gray-50 rounded-t-lg overflow-hidden">
                   <Image
@@ -926,22 +963,41 @@ export default function DashboardPage() {
               </CardHeader>
 
               <CardContent className="p-3 sm:p-4">
-                <CardTitle className="text-base sm:text-lg mb-2 line-clamp-2">{product.name}</CardTitle>
-                <CardDescription className="mb-3 text-sm line-clamp-2">{product.description}</CardDescription>
+                <CardTitle
+                  id={`product-title-${product.id}`}
+                  className="text-base sm:text-lg mb-2 line-clamp-2"
+                >
+                  {product.name}
+                </CardTitle>
+                <CardDescription className="mb-3 text-sm line-clamp-2">
+                  {product.description}
+                </CardDescription>
 
                 <div className="flex items-center mb-3">
-                  <div className="flex items-center" role="img" aria-label={`Rating: ${product.rating} out of 5 stars`}>
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="ml-1 text-sm font-medium">{product.rating}</span>
-                    <span className="ml-1 text-sm text-gray-600">({product.reviews} reviews)</span>
+                  <div
+                    className="flex items-center"
+                    role="img"
+                    aria-label={`Rating: ${product.rating} out of 5 stars, ${product.reviews} reviews`}
+                  >
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" aria-hidden="true" />
+                    <span className="ml-1 text-sm font-medium" aria-hidden="true">{product.rating}</span>
+                    <span className="ml-1 text-sm text-gray-600" aria-hidden="true">({product.reviews} reviews)</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-4" aria-label="Pricing information">
                   <div>
-                    <span className="text-lg sm:text-2xl font-bold text-blue-600">₹{product.price.toLocaleString()}</span>
+                    <span
+                      className="text-lg sm:text-2xl font-bold text-blue-600"
+                      aria-label={`Current price ${product.price.toLocaleString()} rupees`}
+                    >
+                      ₹{product.price.toLocaleString()}
+                    </span>
                     {product.originalPrice > product.price && (
-                      <span className="ml-2 text-sm text-gray-500 line-through">
+                      <span
+                        className="ml-2 text-sm text-gray-500 line-through"
+                        aria-label={`Original price ${product.originalPrice.toLocaleString()} rupees`}
+                      >
                         ₹{product.originalPrice.toLocaleString()}
                       </span>
                     )}
@@ -952,7 +1008,8 @@ export default function DashboardPage() {
                   className="w-full text-sm sm:text-base"
                   onClick={() => addToCart(product)}
                   disabled={!product.inStock || addingToCart === product.id}
-                  aria-label={`Add ${product.name} to cart`}
+                  aria-label={`Add ${product.name} to cart${!product.inStock ? ' - Currently out of stock' : ''}`}
+                  aria-describedby={`product-title-${product.id}`}
                 >
                   {addingToCart === product.id ? (
                     <LoadingSpinner size="sm" variant="inline" text="Adding..." />
@@ -996,7 +1053,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
-      </div>
+      </main>
 
       {/* Floating Comparison Bar */}
       {compareList.length > 0 && (
