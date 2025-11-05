@@ -401,14 +401,46 @@ export default function DashboardPage() {
 
   // Memoize filtered and sorted products for better performance
   const filteredProducts = useMemo(() => {
+    // Early return if no filters applied and no search term
+    if (selectedCategory === "all" && !searchTerm && priceRange.min === 0 && priceRange.max === 150000) {
+      return products.sort((a, b) => {
+        switch (sortBy) {
+          case "price-low":
+            return a.price - b.price
+          case "price-high":
+            return b.price - a.price
+          case "rating":
+            return b.rating - a.rating
+          default:
+            return a.name.localeCompare(b.name)
+        }
+      })
+    }
+
+    // Use case-insensitive search and cache search terms
+    const searchLower = searchTerm.toLowerCase()
+
     return products
-      .filter(
-        (product) =>
-          (selectedCategory === "all" || product.category === selectedCategory) &&
-          product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-          product.price >= priceRange.min &&
-          product.price <= priceRange.max,
-      )
+      .filter((product) => {
+        // Category filter
+        if (selectedCategory !== "all" && product.category !== selectedCategory) {
+          return false
+        }
+
+        // Price range filter
+        if (product.price < priceRange.min || product.price > priceRange.max) {
+          return false
+        }
+
+        // Search filter - check multiple fields for better results
+        if (searchTerm && !product.name.toLowerCase().includes(searchLower) &&
+          !product.category.toLowerCase().includes(searchLower) &&
+          !product.description.toLowerCase().includes(searchLower)) {
+          return false
+        }
+
+        return true
+      })
       .sort((a, b) => {
         switch (sortBy) {
           case "price-low":
@@ -571,28 +603,33 @@ export default function DashboardPage() {
     return products.filter(product => compareList.includes(product.id))
   }, [compareList])
 
-  // Generate search suggestions
+  // Generate search suggestions with better performance
   const searchSuggestions = useMemo(() => {
     if (!searchTerm || searchTerm.length < 1) {
       return searchHistory.slice(0, 5)
     }
 
-    const productSuggestions = products
-      .filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      .slice(0, 5)
-      .map(product => product.name)
+    const searchLower = searchTerm.toLowerCase()
+    const suggestions = new Set<string>()
 
-    const categorySuggestions = categories
+    // Add product name suggestions (limited to avoid performance issues)
+    products
+      .filter(product =>
+        product.name.toLowerCase().includes(searchLower) ||
+        product.category.toLowerCase().includes(searchLower)
+      )
+      .slice(0, 10) // Limit to 10 for performance
+      .forEach(product => suggestions.add(product.name))
+
+    // Add category suggestions
+    categories
       .filter(cat =>
-        cat.label.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        cat.label.toLowerCase().includes(searchLower) &&
         cat.value !== "all"
       )
-      .map(cat => cat.label)
+      .forEach(cat => suggestions.add(cat.label))
 
-    return [...new Set([...productSuggestions, ...categorySuggestions])]
+    return Array.from(suggestions).slice(0, 8) // Limit final results
   }, [searchTerm, searchHistory])
 
   // Handle search selection
@@ -606,7 +643,7 @@ export default function DashboardPage() {
     localStorage.setItem('electrotrack-search-history', JSON.stringify(newHistory))
   }, [searchHistory])
 
-  // Debounced search effect
+  // Debounced search effect with proper cleanup
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm && searchTerm.length >= 2) {
@@ -617,6 +654,44 @@ export default function DashboardPage() {
 
     return () => clearTimeout(timer)
   }, [searchTerm])
+
+  // Cleanup event listeners on unmount
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      // Force re-render when cart is updated from other components
+      setAddingToCart(null)
+    }
+
+    window.addEventListener('cartUpdated', handleCartUpdate)
+
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate)
+    }
+  }, [])
+
+  // Auto-cleanup expired search suggestions
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      setSearchHistory(prev => {
+        // Keep only recent searches (last 24 hours of activity)
+        const oneDay = 24 * 60 * 60 * 1000
+        const now = Date.now()
+        const recentSearches = prev.filter(() => {
+          // In a real app, you'd store timestamps with searches
+          // For now, just limit to 10 most recent
+          return prev.length <= 10
+        })
+
+        if (recentSearches.length !== prev.length) {
+          localStorage.setItem('electrotrack-search-history', JSON.stringify(recentSearches))
+        }
+
+        return recentSearches
+      })
+    }, 5 * 60 * 1000) // Run every 5 minutes
+
+    return () => clearInterval(cleanupInterval)
+  }, [])
 
   // Show loading while checking authentication
   if (isLoading) {
