@@ -28,8 +28,10 @@ export class CartService {
 
     return items.reduce((total, item) => {
       // Safety check for item properties
-      const price = typeof item?.price === 'number' ? item.price : 0
-      const quantity = typeof item?.quantity === 'number' ? item.quantity : 0
+      const price = typeof item?.price === 'number' && item.price > 0 ? item.price : 0
+      const quantity = typeof item?.quantity === 'number' && item.quantity > 0 ? item.quantity : 0
+      // Skip items with zero quantity to avoid affecting totals
+      if (quantity === 0 || price === 0) return total
       return total + (price * quantity)
     }, 0)
   }
@@ -44,6 +46,18 @@ export class CartService {
 
     const safeItems = Array.isArray(items) ? items : []
     const totalAmount = this.calculateTotal(safeItems)
+
+    // If offline, persist to fallback immediately without network attempt
+    try {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        this.fallbackStorage.set(userEmail, safeItems)
+        // eslint-disable-next-line no-console
+        console.warn('Offline: saved cart to fallback storage')
+        return true
+      }
+    } catch (err) {
+      // ignore navigator access errors in SSR contexts
+    }
 
     try {
       const response = await fetch('/api/cart/save', {

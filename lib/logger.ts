@@ -89,8 +89,10 @@ class Logger {
     }
 
     // Utility method for API errors
-    apiError(endpoint: string, error: Error | unknown, context = 'API'): void {
-        this.error(`API call failed: ${endpoint}`, error, context)
+    // Utility method for API errors. Accepts optional requestId for tracing.
+    apiError(endpoint: string, error: Error | unknown, requestId?: string, context = 'API'): void {
+        const ctx = requestId ? `${context} [req:${requestId}]` : context
+        this.error(`API call failed: ${endpoint}`, error, ctx)
     }
 
     // Utility method for component errors

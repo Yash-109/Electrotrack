@@ -225,6 +225,17 @@ npm run lint         # Run ESLint
 
 ## 📞 Support & Contact
 
+## 🧰 Recent maintenance
+
+Small focused maintenance commits were added to improve reliability and accessibility:
+
+- `perf(dashboard)`: Optimized product filtering and added memory cleanup helpers to reduce memory usage and speed up searches.
+- `fix(api)`: Hardened API error handling and input validation across cart and product endpoints.
+- `a11y(dashboard)`: Added accessibility utilities, skip links, and improved ARIA support for the dashboard.
+
+These are low-risk, backwards-compatible improvements that make the app more robust and accessible.
+
+
 ### Business Information
 - **Store**: Radhika Electronics
 - **Address**: 18-gala minibazar, matavadi circle, Surat, Gujarat 394107
