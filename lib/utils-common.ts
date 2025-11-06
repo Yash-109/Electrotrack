@@ -55,3 +55,24 @@ export function generateRandomString(length: number = 8): string {
     }
     return result
 }
+
+// Format currency for display
+export function formatCurrency(amount: number, currency = 'INR'): string {
+    if (typeof amount !== 'number' || isNaN(amount)) {
+        return '₹0'
+    }
+
+    return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+    }).format(amount).replace(/INR/, '₹')
+}
+
+// Safe string truncation
+export function truncateText(text: string, maxLength: number): string {
+    if (!text || typeof text !== 'string') return ''
+    if (text.length <= maxLength) return text
+    return text.slice(0, maxLength - 3) + '...'
+}
