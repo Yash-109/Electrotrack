@@ -31,12 +31,14 @@ export function Header() {
     if (isLoadingCart) return // Prevent multiple simultaneous requests
 
     setIsLoadingCart(true)
+
+    setIsLoadingCart(true)
     try {
       const cartItems = await CartService.getCart(userEmail)
 
       if (cartItems && Array.isArray(cartItems)) {
         const totalItems = cartItems.reduce((total: number, item: any) => total + (item.quantity || 0), 0)
-        setCartItemCount(totalItems)
+        setCartItemCount(Math.max(0, totalItems)) // Ensure non-negative
       } else {
         setCartItemCount(0)
       }

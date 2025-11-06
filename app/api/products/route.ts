@@ -100,7 +100,8 @@ export async function GET(request: NextRequest) {
         totalProducts,
         hasNext: page < Math.ceil(totalProducts / limit),
         hasPrev: page > 1,
-        limit
+        limit,
+        showing: productList.length // Add count of items in current page
       }
     })
 
