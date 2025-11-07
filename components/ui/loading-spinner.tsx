@@ -6,13 +6,15 @@ interface LoadingSpinnerProps {
     text?: string
     className?: string
     variant?: "default" | "overlay" | "inline"
+    color?: "blue" | "gray" | "green" | "red"
 }
 
 export function LoadingSpinner({
     size = "md",
     text,
     className,
-    variant = "default"
+    variant = "default",
+    color = "blue"
 }: LoadingSpinnerProps) {
     const sizeClasses = {
         sm: "h-4 w-4",
@@ -26,11 +28,18 @@ export function LoadingSpinner({
         lg: "text-lg"
     }
 
+    const colorClasses = {
+        blue: "text-blue-600",
+        gray: "text-gray-600",
+        green: "text-green-600",
+        red: "text-red-600"
+    }
+
     if (variant === "overlay") {
         return (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                 <div className="bg-white rounded-lg p-6 flex flex-col items-center gap-3">
-                    <Loader2 className={cn(sizeClasses[size], "animate-spin text-blue-600")} />
+                    <Loader2 className={cn(sizeClasses[size], "animate-spin", colorClasses[color])} />
                     {text && (
                         <p className={cn(textClasses[size], "text-gray-700 font-medium")}>
                             {text}
@@ -44,7 +53,7 @@ export function LoadingSpinner({
     if (variant === "inline") {
         return (
             <div className={cn("flex items-center gap-2", className)}>
-                <Loader2 className={cn(sizeClasses[size], "animate-spin text-blue-600")} />
+                <Loader2 className={cn(sizeClasses[size], "animate-spin", colorClasses[color])} />
                 {text && (
                     <span className={cn(textClasses[size], "text-gray-600")}>
                         {text}
@@ -56,7 +65,7 @@ export function LoadingSpinner({
 
     return (
         <div className={cn("flex flex-col items-center justify-center gap-3 py-8", className)}>
-            <Loader2 className={cn(sizeClasses[size], "animate-spin text-blue-600")} />
+            <Loader2 className={cn(sizeClasses[size], "animate-spin", colorClasses[color])} />
             {text && (
                 <p className={cn(textClasses[size], "text-gray-600 font-medium")}>
                     {text}
