@@ -35,7 +35,9 @@ class Logger {
     private formatLog(entry: LogEntry): string {
         const level = LogLevel[entry.level]
         const context = entry.context ? `[${entry.context}]` : ''
-        return `${entry.timestamp} ${level} ${context} ${entry.message}`
+        // Add a short human-friendly timestamp followed by the ISO timestamp for clarity
+        const human = new Date(entry.timestamp).toLocaleString()
+        return `${human} (${entry.timestamp}) ${level} ${context} ${entry.message}`
     }
 
     private shouldLog(level: LogLevel): boolean {
