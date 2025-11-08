@@ -784,11 +784,13 @@ export default function DashboardPage() {
                   {searchSuggestions.map((suggestion, index) => (
                     <button
                       key={index}
+                      type="button"
                       className="w-full text-left px-3 py-2 hover:bg-gray-50 focus:bg-gray-50 border-b border-gray-100 last:border-b-0"
                       onClick={() => handleSearchSelect(suggestion)}
                       role="option"
-                      aria-selected={false}
+                      aria-selected={suggestion === searchTerm}
                       tabIndex={showSearchSuggestions ? 0 : -1}
+                      data-suggestion-index={index}
                     >
                       <div className="flex items-center gap-2">
                         <Search className="h-3 w-3 text-gray-400" />
