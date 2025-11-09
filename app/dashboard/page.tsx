@@ -745,8 +745,8 @@ export default function DashboardPage() {
 
           {/* Filters */}
           <div className="flex flex-col gap-4 mb-6">
-            {/* Search Bar */}
-            <div className="relative w-full">
+            {/* Search Bar (wrapped in a non-submitting form to avoid accidental Enter submits) */}
+            <form onSubmit={(e) => e.preventDefault()} className="relative w-full" aria-label="Search form">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" aria-hidden="true" />
               <Input
                 placeholder="Search products..."
@@ -811,7 +811,7 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
-            </div>
+            </form>
 
             {/* Filter Controls */}
             <div className="flex flex-col sm:flex-row gap-3">
