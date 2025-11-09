@@ -467,6 +467,18 @@ export default function DashboardPage() {
       return
     }
 
+    // Guard: ensure we have a usable email on the user object before calling cart APIs
+    const userEmail = (currentUser as any)?.email ?? ''
+    if (!userEmail) {
+      toast({
+        title: "Account issue",
+        description: "Your account is missing an email address. Please re-login to continue.",
+        variant: "destructive",
+      })
+      router.push("/login")
+      return
+    }
+
     if (!product || !product.id || !product.name || typeof product.price !== 'number') {
       toast({
         title: "Invalid product",
@@ -481,7 +493,7 @@ export default function DashboardPage() {
 
     try {
       // Get current cart
-      const currentCart = await CartService.getCart(currentUser.email)
+      const currentCart = await CartService.getCart(userEmail)
 
       // Check if item already exists in cart
       const existingItemIndex = currentCart.findIndex(item => item.id === product.id.toString())
@@ -508,7 +520,7 @@ export default function DashboardPage() {
       }
 
       // Save updated cart
-      const success = await CartService.saveCart(currentUser.email, updatedCart)
+      const success = await CartService.saveCart(userEmail, updatedCart)
 
       if (success) {
         toast({
@@ -759,6 +771,7 @@ export default function DashboardPage() {
                 onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 150)}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
+                    0
                     setShowSearchSuggestions(false)
                     e.currentTarget.blur()
                   }
