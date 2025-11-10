@@ -354,6 +354,7 @@ export default function DashboardPage() {
   const [favorites, setFavorites] = useState<Set<number>>(new Set())
   const [compareList, setCompareList] = useState<number[]>([])
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [quickViewProduct, setQuickViewProduct] = useState<typeof products[0] | null>(null)
   const [imageLoadingStates, setImageLoadingStates] = useState<Set<number>>(new Set())
@@ -719,6 +720,11 @@ export default function DashboardPage() {
     return () => clearInterval(cleanupInterval)
   }, [])
 
+  // Reset selected suggestion index when suggestions change
+  useEffect(() => {
+    setSelectedSuggestionIndex(-1)
+  }, [searchSuggestions])
+
   // Show loading while checking authentication
   if (isLoading) {
     return (
@@ -785,9 +791,26 @@ export default function DashboardPage() {
                 onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 150)}
                 onKeyDown={(e) => {
                   if (e.key === 'Escape') {
-                    0
                     setShowSearchSuggestions(false)
+                    setSelectedSuggestionIndex(-1)
                     e.currentTarget.blur()
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    setSelectedSuggestionIndex(prev =>
+                      prev < searchSuggestions.length - 1 ? prev + 1 : 0
+                    )
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    setSelectedSuggestionIndex(prev =>
+                      prev > 0 ? prev - 1 : searchSuggestions.length - 1
+                    )
+                  } else if (e.key === 'Enter' && selectedSuggestionIndex >= 0) {
+                    e.preventDefault()
+                    const selectedSuggestion = searchSuggestions[selectedSuggestionIndex]
+                    if (selectedSuggestion) {
+                      handleSearchSelect(selectedSuggestion)
+                      setSelectedSuggestionIndex(-1)
+                    }
                   }
                 }}
                 className="pl-10"
@@ -812,10 +835,16 @@ export default function DashboardPage() {
                     <button
                       key={index}
                       type="button"
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 focus:bg-gray-50 border-b border-gray-100 last:border-b-0"
-                      onClick={() => handleSearchSelect(suggestion)}
+                      className={`w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 ${index === selectedSuggestionIndex
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'hover:bg-gray-50 focus:bg-gray-50'
+                        }`}
+                      onClick={() => {
+                        handleSearchSelect(suggestion)
+                        setSelectedSuggestionIndex(-1)
+                      }}
                       role="option"
-                      aria-selected={suggestion === searchTerm}
+                      aria-selected={index === selectedSuggestionIndex}
                       tabIndex={showSearchSuggestions ? 0 : -1}
                       data-suggestion-index={index}
                     >
