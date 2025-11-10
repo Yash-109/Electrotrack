@@ -356,12 +356,26 @@ export default function DashboardPage() {
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [quickViewProduct, setQuickViewProduct] = useState<typeof products[0] | null>(null)
+  const [imageLoadingStates, setImageLoadingStates] = useState<Set<number>>(new Set())
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
 
   // Accessibility: keep track of previously focused element so focus can be restored
   const previouslyFocusedElement = useRef<HTMLElement | null>(null)
+
+  // Handle image loading states
+  const handleImageLoad = useCallback((productId: number) => {
+    setImageLoadingStates(prev => {
+      const newSet = new Set(prev)
+      newSet.delete(productId)
+      return newSet
+    })
+  }, [])
+
+  const handleImageLoadStart = useCallback((productId: number) => {
+    setImageLoadingStates(prev => new Set(prev).add(productId))
+  }, [])
 
   // Close quick view on Escape and restore focus
   useEffect(() => {
@@ -906,6 +920,12 @@ export default function DashboardPage() {
             >
               <CardHeader className="p-0">
                 <div className="relative bg-gray-50 rounded-t-lg overflow-hidden">
+                  {/* Image loading skeleton */}
+                  {imageLoadingStates.has(product.id) && (
+                    <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-300 rounded-lg animate-pulse"></div>
+                    </div>
+                  )}
                   <Image
                     src={product.image || "/placeholder.svg"}
                     alt={`Image of ${product.name}`}
@@ -914,6 +934,9 @@ export default function DashboardPage() {
                     height={288}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                     priority={false}
+                    onLoadStart={() => handleImageLoadStart(product.id)}
+                    onLoad={() => handleImageLoad(product.id)}
+                    onError={() => handleImageLoad(product.id)}
                   />
                   {product.originalPrice > product.price && (
                     <Badge
