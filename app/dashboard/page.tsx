@@ -659,6 +659,18 @@ export default function DashboardPage() {
     return Array.from(suggestions).slice(0, 8) // Limit final results
   }, [searchTerm, searchHistory])
 
+  // Debounced search history save function to prevent excessive localStorage writes
+  const debouncedSaveSearchHistory = useCallback(() => {
+    let timeoutId: NodeJS.Timeout | null = null
+
+    return (newHistory: string[]) => {
+      if (timeoutId) clearTimeout(timeoutId)
+      timeoutId = setTimeout(() => {
+        localStorage.setItem('electrotrack-search-history', JSON.stringify(newHistory))
+      }, 500) // 500ms delay
+    }
+  }, [])()
+
   // Handle search selection
   const handleSearchSelect = useCallback((selectedTerm: string) => {
     setSearchTerm(selectedTerm)
@@ -667,7 +679,7 @@ export default function DashboardPage() {
     // Add to search history
     const newHistory = [selectedTerm, ...searchHistory.filter(item => item !== selectedTerm)].slice(0, 10)
     setSearchHistory(newHistory)
-    localStorage.setItem('electrotrack-search-history', JSON.stringify(newHistory))
+    debouncedSaveSearchHistory(newHistory)
   }, [searchHistory])
 
   // Debounced search effect with proper cleanup
@@ -710,7 +722,7 @@ export default function DashboardPage() {
         })
 
         if (recentSearches.length !== prev.length) {
-          localStorage.setItem('electrotrack-search-history', JSON.stringify(recentSearches))
+          debouncedSaveSearchHistory(recentSearches)
         }
 
         return recentSearches
@@ -836,8 +848,8 @@ export default function DashboardPage() {
                       key={index}
                       type="button"
                       className={`w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 ${index === selectedSuggestionIndex
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'hover:bg-gray-50 focus:bg-gray-50'
+                        ? 'bg-blue-50 text-blue-700'
+                        : 'hover:bg-gray-50 focus:bg-gray-50'
                         }`}
                       onClick={() => {
                         handleSearchSelect(suggestion)
