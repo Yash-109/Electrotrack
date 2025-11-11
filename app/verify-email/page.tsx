@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
+import { log } from '@/lib/logger'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -59,7 +60,7 @@ function VerifyEmailContent() {
         })
       }
     } catch (error) {
-      console.error('Verification error:', error)
+      log.error('Verification error', error, 'VerifyEmail')
       setVerificationState({
         status: 'error',
         message: 'Failed to verify email. Please try again.'
@@ -96,7 +97,7 @@ function VerifyEmailContent() {
         }))
       }
     } catch (error) {
-      console.error('Resend error:', error)
+      log.error('Resend verification error', error, 'VerifyEmail')
       setVerificationState(prev => ({
         ...prev,
         message: 'Failed to resend verification email'
