@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ShoppingCart, User, LogOut, Package, Settings, Menu, X, UserCircle } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
+import { log } from "@/lib/logger"
 import { CartService } from "@/lib/cart-service"
 
 export function Header() {
@@ -43,7 +44,7 @@ export function Header() {
         setCartItemCount(0)
       }
     } catch (error) {
-      console.error('Failed to fetch cart count:', error)
+      log.error('Failed to fetch cart count', error, 'Header')
       setCartItemCount(0)
     } finally {
       setIsLoadingCart(false)

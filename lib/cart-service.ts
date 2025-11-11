@@ -1,4 +1,6 @@
 // Cart persistence utilities
+import { log } from './logger'
+
 export interface CartItem {
   id: string
   name: string
@@ -39,8 +41,7 @@ export class CartService {
   static async saveCart(userEmail: string, items: CartItem[]): Promise<boolean> {
     // Validate inputs
     if (!userEmail || !items) {
-      // eslint-disable-next-line no-console
-      console.error('Invalid saveCart parameters:', { userEmail, items })
+      log.error('Invalid saveCart parameters', { userEmail: !!userEmail, items: !!items }, 'CartService')
       return false
     }
 
@@ -51,8 +52,7 @@ export class CartService {
     try {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         this.fallbackStorage.set(userEmail, safeItems)
-        // eslint-disable-next-line no-console
-        console.warn('Offline: saved cart to fallback storage')
+        log.warn('Offline: saved cart to fallback storage', { userEmail }, 'CartService')
         return true
       }
     } catch (err) {
@@ -74,30 +74,25 @@ export class CartService {
 
       if (!response.ok) {
         const errorData = await response.text()
-        // eslint-disable-next-line no-console
-        console.error('Cart save failed:', response.status, errorData)
+        log.error('Cart save failed', { status: response.status, error: errorData }, 'CartService')
 
         // Fallback to in-memory storage for development
-        // eslint-disable-next-line no-console
-        console.warn('Using fallback in-memory cart storage')
+        log.warn('Using fallback in-memory cart storage', { userEmail }, 'CartService')
         this.fallbackStorage.set(userEmail, safeItems)
         return true
       }
 
       const result = await response.json()
-      // eslint-disable-next-line no-console
-      console.log('Cart saved successfully:', result)
+      log.debug('Cart saved successfully', { userEmail, itemCount: safeItems.length }, 'CartService')
       return true
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error saving cart:', error)
+      log.error('Error saving cart', error, 'CartService')
 
       // Check if it's a network error or server error
-      const isNetworkError = error instanceof TypeError && error.message.includes('fetch')
+      const isNetworkError = error instanceof TypeError && (error as Error).message.includes('fetch')
       const errorType = isNetworkError ? 'Network Error' : 'Server Error'
 
-      // eslint-disable-next-line no-console
-      console.warn(`Cart save failed with ${errorType}, using fallback storage`)
+      log.warn(`Cart save failed with ${errorType}, using fallback storage`, { userEmail }, 'CartService')
 
       // Fallback to in-memory storage for development
       this.fallbackStorage.set(userEmail, safeItems)
@@ -107,8 +102,7 @@ export class CartService {
 
   static async getCart(userEmail: string): Promise<CartItem[]> {
     if (!userEmail) {
-      // eslint-disable-next-line no-console
-      console.error('Invalid getCart parameter: userEmail is required')
+      log.error('Invalid getCart parameter: userEmail is required', {}, 'CartService')
       return []
     }
 
@@ -130,14 +124,12 @@ export class CartService {
 
       return []
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error retrieving cart:', error)
+      log.error('Error retrieving cart', error, 'CartService')
 
       // Fallback to in-memory storage
       const fallbackItems = this.fallbackStorage.get(userEmail)
       if (fallbackItems) {
-        // eslint-disable-next-line no-console
-        console.warn('Using fallback cart data due to error for user:', userEmail)
+        log.warn('Using fallback cart data due to error for user', { userEmail }, 'CartService')
         return fallbackItems
       }
 
@@ -147,8 +139,7 @@ export class CartService {
 
   static async clearCart(userEmail: string): Promise<boolean> {
     if (!userEmail) {
-      // eslint-disable-next-line no-console
-      console.error('Invalid clearCart parameter: userEmail is required')
+      log.error('Invalid clearCart parameter: userEmail is required', {}, 'CartService')
       return false
     }
 
@@ -171,8 +162,7 @@ export class CartService {
       this.fallbackStorage.delete(userEmail)
       return true
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error clearing cart:', error)
+      log.error('Error clearing cart', error, 'CartService')
 
       // Clear fallback storage even if API fails
       this.fallbackStorage.delete(userEmail)

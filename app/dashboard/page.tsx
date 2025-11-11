@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { log } from "@/lib/logger"
 import Image from "next/image"
 import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X, Eye } from "lucide-react"
@@ -574,7 +574,7 @@ export default function DashboardPage() {
         const favoritesArray = JSON.parse(savedFavorites)
         setFavorites(new Set(favoritesArray))
       } catch (error) {
-        console.error('Error loading favorites:', error)
+        log.error('Failed to load favorites from localStorage', error, 'Dashboard')
       }
     }
 
@@ -585,7 +585,7 @@ export default function DashboardPage() {
         const historyArray = JSON.parse(savedHistory)
         setSearchHistory(historyArray)
       } catch (error) {
-        console.error('Error loading search history:', error)
+        log.error('Failed to load search history from localStorage', error, 'Dashboard')
       }
     }
   }, [])
@@ -686,8 +686,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchTerm && searchTerm.length >= 2) {
-        // This would be where you'd call an API for search analytics
-        console.log('Searching for:', searchTerm)
+        log.debug('Search term updated', { searchTerm, length: searchTerm.length }, 'Dashboard')
       }
     }, 300)
 
