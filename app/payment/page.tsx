@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
+import { log } from "@/lib/logger"
 
 interface CartItem {
   id: number
@@ -66,7 +67,8 @@ export default function PaymentPage() {
           resolve(true)
         }
         script.onerror = () => {
-          console.error('Failed to load Razorpay script')
+          log.error('Failed to load Razorpay script', {}, 'Payment')
+          setRazorpayLoaded(false)
           resolve(false)
         }
         document.body.appendChild(script)
@@ -113,7 +115,7 @@ export default function PaymentPage() {
       const checkoutData = JSON.parse(savedCheckoutData)
       setCheckoutData(checkoutData)
     } catch (error) {
-      console.error("Error parsing checkout data:", error)
+      log.error('Error parsing checkout data', error, 'Payment')
       toast({
         title: "Error loading checkout data",
         description: "Please try again from your cart.",
@@ -228,7 +230,7 @@ export default function PaymentPage() {
               throw new Error(verifyData.error || 'Payment verification failed')
             }
           } catch (verifyError: any) {
-            console.error('Payment verification error:', verifyError)
+            log.error('Payment verification error', verifyError, 'Payment')
             toast({
               title: "Payment verification failed",
               description: verifyError.message,
@@ -253,7 +255,7 @@ export default function PaymentPage() {
       rzp.open()
 
     } catch (error: any) {
-      console.error('Payment error:', error)
+      log.error('Payment error', error, 'Payment')
       toast({
         title: "Payment failed",
         description: error.message,
@@ -335,7 +337,7 @@ export default function PaymentPage() {
         throw new Error(result.error || 'Failed to place order')
       }
     } catch (error: any) {
-      console.error('COD order error:', error)
+      log.error('COD order error', error, 'Payment')
       toast({
         title: "Order failed",
         description: error.message,
