@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { log } from '@/lib/logger'
 import { AlertTriangle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,7 +34,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     }
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        console.error("Error caught by boundary:", error, errorInfo)
+        log.error('Error caught by ErrorBoundary', { error, errorInfo }, 'ErrorBoundary')
         this.setState({
             error,
             errorInfo,
