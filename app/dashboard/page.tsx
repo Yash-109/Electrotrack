@@ -432,26 +432,31 @@ export default function DashboardPage() {
       })
     }
 
-    // Use case-insensitive search and cache search terms
+    // Pre-compute search term once for efficiency
     const searchLower = searchTerm.toLowerCase()
+    const hasSearchTerm = searchTerm.length > 0
 
     return products
       .filter((product) => {
-        // Category filter
+        // Category filter (most restrictive first)
         if (selectedCategory !== "all" && product.category !== selectedCategory) {
           return false
         }
 
-        // Price range filter
+        // Price range filter (numeric comparison, fast)
         if (product.price < priceRange.min || product.price > priceRange.max) {
           return false
         }
 
-        // Search filter - check multiple fields for better results
-        if (searchTerm && !product.name.toLowerCase().includes(searchLower) &&
-          !product.category.toLowerCase().includes(searchLower) &&
-          !product.description.toLowerCase().includes(searchLower)) {
-          return false
+        // Search filter - pre-compute lowercase values for efficiency
+        if (hasSearchTerm) {
+          const nameMatch = product.name.toLowerCase().includes(searchLower)
+          const categoryMatch = product.category.toLowerCase().includes(searchLower)
+          const descMatch = product.description.toLowerCase().includes(searchLower)
+
+          if (!nameMatch && !categoryMatch && !descMatch) {
+            return false
+          }
         }
 
         return true
@@ -472,29 +477,23 @@ export default function DashboardPage() {
 
   // Memoize addToCart function to prevent unnecessary re-renders
   const addToCart = useCallback(async (product: (typeof products)[0]) => {
-    if (!isLoggedIn || !currentUser) {
+    // Consolidated login and user validation
+    if (!isLoggedIn || !currentUser?.email) {
+      const message = !isLoggedIn
+        ? "Please login to add items to cart."
+        : "Your account is missing an email address. Please re-login to continue."
+
       toast({
-        title: "Login required",
-        description: "Please login to add items to cart.",
+        title: isLoggedIn ? "Account issue" : "Login required",
+        description: message,
         variant: "destructive",
       })
       router.push("/login")
       return
     }
 
-    // Guard: ensure we have a usable email on the user object before calling cart APIs
-    const userEmail = (currentUser as any)?.email ?? ''
-    if (!userEmail) {
-      toast({
-        title: "Account issue",
-        description: "Your account is missing an email address. Please re-login to continue.",
-        variant: "destructive",
-      })
-      router.push("/login")
-      return
-    }
-
-    if (!product || !product.id || !product.name || typeof product.price !== 'number') {
+    // Validate product data
+    if (!product?.id || !product?.name || typeof product.price !== 'number' || product.price <= 0) {
       toast({
         title: "Invalid product",
         description: "Unable to add this product to cart.",
@@ -508,7 +507,7 @@ export default function DashboardPage() {
 
     try {
       // Get current cart
-      const currentCart = await CartService.getCart(userEmail)
+      const currentCart = await CartService.getCart(currentUser.email)
 
       // Check if item already exists in cart
       const existingItemIndex = currentCart.findIndex(item => item.id === product.id.toString())
@@ -535,7 +534,7 @@ export default function DashboardPage() {
       }
 
       // Save updated cart
-      const success = await CartService.saveCart(userEmail, updatedCart)
+      const success = await CartService.saveCart(currentUser.email, updatedCart)
 
       if (success) {
         toast({
@@ -711,25 +710,21 @@ export default function DashboardPage() {
   useEffect(() => {
     const cleanupInterval = setInterval(() => {
       setSearchHistory(prev => {
-        // Keep only recent searches (last 24 hours of activity)
-        const oneDay = 24 * 60 * 60 * 1000
-        const now = Date.now()
-        const recentSearches = prev.filter(() => {
-          // In a real app, you'd store timestamps with searches
-          // For now, just limit to 10 most recent
-          return prev.length <= 10
-        })
+        // Keep only recent searches (limit to 10 most recent)
+        const trimmedHistory = prev.slice(0, 10)
 
-        if (recentSearches.length !== prev.length) {
-          debouncedSaveSearchHistory(recentSearches)
+        // Only save if the history was actually trimmed
+        if (trimmedHistory.length !== prev.length) {
+          debouncedSaveSearchHistory(trimmedHistory)
+          return trimmedHistory
         }
 
-        return recentSearches
+        return prev
       })
     }, 5 * 60 * 1000) // Run every 5 minutes
 
     return () => clearInterval(cleanupInterval)
-  }, [])
+  }, [debouncedSaveSearchHistory])
 
   // Reset selected suggestion index when suggestions change
   useEffect(() => {
