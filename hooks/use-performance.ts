@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { log } from '@/lib/logger'
 
 export function useSessionCleanup() {
     const cleanupFunctionsRef = useRef<Array<() => void>>([])
@@ -19,7 +20,7 @@ export function useSessionCleanup() {
             try {
                 fn()
             } catch (error) {
-                console.warn('Cleanup function failed:', error)
+                log.warn('Cleanup function failed', error, 'use-performance')
             }
         })
         cleanupFunctionsRef.current = []
@@ -97,7 +98,7 @@ export function useLocalStorageCleanup(key: string, maxAge: number = 24 * 60 * 6
                 }
             }
         } catch (error) {
-            console.warn(`Failed to cleanup localStorage key: ${key}`, error)
+            log.warn(`Failed to cleanup localStorage key: ${key}`, error, 'use-performance')
         }
         return false
     }, [key, isExpired])
