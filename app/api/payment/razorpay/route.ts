@@ -33,15 +33,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { 
-      amount, 
-      currency = 'INR', 
-      userId, 
+    const {
+      amount,
+      currency = 'INR',
+      userId,
       orderDetails,
       preferredMethod = 'card',
-      customerInfo 
+      customerInfo
     } = body
-    
+
     if (!amount || !userId) {
       return NextResponse.json({
         success: false,
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         error: 'Minimum amount is ₹1'
       }, { status: 400 })
     }
-    
+
     // Create Razorpay order with enhanced options
     const options = {
       amount: Math.round(amount * 100), // Razorpay expects amount in paise
@@ -70,13 +70,13 @@ export async function POST(request: NextRequest) {
         created_at: new Date().toISOString()
       }
     }
-    
+
     const order = await razorpay!.orders.create(options)
-    
+
     // Store temporary order in database with enhanced details
     const db = await getDb()
     const tempOrders = db.collection('temp_orders')
-    
+
     const orderRecord = {
       razorpayOrderId: order.id,
       userId,
@@ -91,9 +91,9 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date(),
       expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes expiry
     }
-    
+
     await tempOrders.insertOne(orderRecord)
-    
+
     return NextResponse.json({
       success: true,
       orderId: order.id,
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         notes: options.notes
       }
     })
-    
+
   } catch (error: any) {
     console.error('Payment order creation error:', error)
     return NextResponse.json({
@@ -128,55 +128,55 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { 
-      razorpay_order_id, 
-      razorpay_payment_id, 
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
       razorpay_signature,
-      userId 
+      userId
     } = body
-    
+
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({
         success: false,
         error: 'Missing payment verification parameters'
       }, { status: 400 })
     }
-    
+
     // Verify signature
     const text = razorpay_order_id + "|" + razorpay_payment_id
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || '')
       .update(text.toString())
       .digest('hex')
-    
+
     if (expectedSignature !== razorpay_signature) {
       return NextResponse.json({
         success: false,
         error: 'Invalid payment signature'
       }, { status: 400 })
     }
-    
+
     // Get payment details from Razorpay
     const payment = await razorpay!.payments.fetch(razorpay_payment_id)
-    
+
     // Update order status in database and create order record
     const db = await getDb()
     const orders = db.collection('orders')
     const tempOrders = db.collection('temp_orders')
-    
+
     // Find the temporary order
-    const tempOrder = await tempOrders.findOne({ 
+    const tempOrder = await tempOrders.findOne({
       razorpayOrderId: razorpay_order_id,
-      userId 
+      userId
     })
-    
+
     if (!tempOrder) {
       return NextResponse.json({
         success: false,
         error: 'Order not found'
       }, { status: 404 })
     }
-    
+
     // Create permanent order record with payment details
     const orderRecord = {
       orderId: `ORD${Date.now()}`,
@@ -208,16 +208,16 @@ export async function PUT(request: NextRequest) {
         createdAt: new Date(payment.created_at * 1000)
       }
     }
-    
+
     await orders.insertOne(orderRecord)
-    
+
     // Clean up temporary order
     await tempOrders.deleteOne({ _id: tempOrder._id })
-    
+
     // Clear user's cart after successful payment
     const carts = db.collection('carts')
     await carts.deleteOne({ userEmail: userId })
-    
+
     return NextResponse.json({
       success: true,
       message: 'Payment verified successfully',
@@ -230,7 +230,7 @@ export async function PUT(request: NextRequest) {
         paymentMethod: orderRecord.paymentMethod
       }
     })
-    
+
   } catch (error: any) {
     console.error('Payment verification error:', error)
     return NextResponse.json({

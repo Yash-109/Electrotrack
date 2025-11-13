@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
+import { useAdminIntegration } from "@/hooks/use-admin-integration"
 import { log } from "@/lib/logger"
 
 interface CartItem {
@@ -55,6 +56,7 @@ export default function PaymentPage() {
   const [razorpayLoaded, setRazorpayLoaded] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+  const { addOnlineSale } = useAdminIntegration()
 
   useEffect(() => {
     // Load Razorpay script
@@ -216,6 +218,20 @@ export default function PaymentPage() {
             const verifyData = await verifyResponse.json()
 
             if (verifyData.success) {
+              // Create transaction in admin system for successful online payment
+              const orderData = JSON.parse(localStorage.getItem("radhika_current_order") || '{}')
+              if (orderData.cartData) {
+                addOnlineSale({
+                  description: `Order: ${orderData.cartData.items.map((item: any) => `${item.name} (x${item.quantity})`).join(', ')}`,
+                  category: "Mixed Electronics",
+                  amount: orderData.cartData.subtotal + orderData.cartData.tax + (orderData.deliveryMethod === "express" ? 1000 : 500),
+                  paymentMethod: "Online",
+                  customer: orderData.fullName,
+                  orderId: verifyData.order.orderId,
+                  orderDate: new Date().toISOString().split("T")[0]
+                })
+              }
+
               // Clear checkout data
               localStorage.removeItem("radhika_checkout_cart")
 
