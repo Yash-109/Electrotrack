@@ -218,29 +218,16 @@ export default function ShippingPage() {
         })
       })
 
-      // Add each cart item as a separate sale in admin system with actual order date
-      const orderDate = new Date().toISOString().split("T")[0] // Current date for the order
-
-      cartData.items.forEach((item) => {
-        for (let i = 0; i < item.quantity; i++) {
-          addOnlineSale({
-            description: item.name,
-            category: item.category,
-            amount: item.price,
-            paymentMethod: shippingData.paymentMethod === "cod" ? "COD" : "Online",
-            customer: shippingData.fullName,
-            orderId: `ORD${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            orderDate: orderDate // Pass the actual order date
-          })
-        }
-      })
+      // Generate order data
+      const orderDate = new Date().toISOString().split("T")[0]
+      const orderId = `ORD${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
       // Store order data
       const orderData = {
         ...shippingData,
         cartData,
         orderDate: new Date().toISOString(),
-        orderId: `ORD${Date.now()}`,
+        orderId: orderId,
         customer: currentUser,
       }
       localStorage.setItem("radhika_current_order", JSON.stringify(orderData))
@@ -292,6 +279,17 @@ export default function ShippingPage() {
 
             // Also store as last order for refresh protection
             localStorage.setItem("radhika_last_order", JSON.stringify(orderData))
+
+            // NOW create transaction in admin system ONLY after successful order
+            addOnlineSale({
+              description: `Order: ${cartData.items.map(item => `${item.name} (x${item.quantity})`).join(', ')}`,
+              category: "Mixed Electronics",
+              amount: finalTotal,
+              paymentMethod: "COD",
+              customer: shippingData.fullName,
+              orderId: result.orderId,
+              orderDate: orderDate
+            })
 
             toast({
               title: "Order placed successfully!",
