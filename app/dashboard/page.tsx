@@ -11,7 +11,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { log } from "@/lib/logger"
 import Image from "next/image"
-import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X, Eye } from "lucide-react"
+import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X, Eye, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
@@ -357,6 +357,7 @@ export default function DashboardPage() {
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [searchHistory, setSearchHistory] = useState<string[]>([])
   const [quickViewProduct, setQuickViewProduct] = useState<typeof products[0] | null>(null)
+  const [showComparisonModal, setShowComparisonModal] = useState(false)
   const [imageLoadingStates, setImageLoadingStates] = useState<Set<number>>(new Set())
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
@@ -1169,12 +1170,7 @@ export default function DashboardPage() {
                   <Button
                     size="sm"
                     className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => {
-                      toast({
-                        title: "Comparison Feature",
-                        description: "Detailed comparison page would open here with side-by-side specs.",
-                      })
-                    }}
+                    onClick={() => setShowComparisonModal(true)}
                   >
                     Compare Now
                   </Button>
@@ -1312,6 +1308,300 @@ export default function DashboardPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Product Comparison Modal */}
+      <Dialog open={showComparisonModal} onOpenChange={setShowComparisonModal}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Product Comparison ({comparedProducts.length} items)</DialogTitle>
+            <p className="text-gray-600">Compare features, specifications, and value to make the best choice</p>
+          </DialogHeader>
+
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b-2 border-gray-200">
+                  <th className="text-left p-4 font-semibold min-w-[180px] bg-gray-50">Feature</th>
+                  {comparedProducts.map((product) => (
+                    <th key={product.id} className="text-center p-4 font-semibold min-w-[220px] bg-gray-50">
+                      <div className="space-y-3">
+                        <div className="relative">
+                          <Image
+                            src={product.image}
+                            alt={product.name}
+                            className="w-28 h-28 object-contain mx-auto rounded-lg border shadow-sm"
+                            width={112}
+                            height={112}
+                          />
+                          {!product.inStock && (
+                            <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                              <span className="bg-red-500 text-white px-2 py-1 rounded text-xs font-medium">Out of Stock</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-sm font-medium text-gray-900 leading-tight">{product.name}</div>
+                        <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* Price & Savings Analysis */}
+                <tr className="border-b hover:bg-blue-50">
+                  <td className="p-4 font-medium text-blue-900 bg-blue-50">💰 Price & Savings</td>
+                  {comparedProducts.map((product) => {
+                    const discount = product.originalPrice > product.price ?
+                      Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0
+                    const savings = product.originalPrice - product.price
+                    return (
+                      <td key={`${product.id}-price`} className="p-4 text-center">
+                        <div className="space-y-2">
+                          <div className="text-2xl font-bold text-green-600">₹{product.price.toLocaleString()}</div>
+                          {product.originalPrice > product.price && (
+                            <div className="space-y-1">
+                              <div className="text-sm text-gray-500 line-through">
+                                ₹{product.originalPrice.toLocaleString()}
+                              </div>
+                              <Badge className="bg-red-500 text-xs">
+                                Save ₹{savings.toLocaleString()} ({discount}% OFF)
+                              </Badge>
+                            </div>
+                          )}
+                          {discount === 0 && <div className="text-xs text-gray-500">No discount</div>}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+
+                {/* Customer Satisfaction */}
+                <tr className="border-b hover:bg-yellow-50">
+                  <td className="p-4 font-medium text-yellow-900 bg-yellow-50">⭐ Customer Satisfaction</td>
+                  {comparedProducts.map((product) => {
+                    const ratingColor = product.rating >= 4.5 ? 'text-green-600' :
+                      product.rating >= 4.0 ? 'text-yellow-600' : 'text-red-600'
+                    return (
+                      <td key={`${product.id}-rating`} className="p-4 text-center">
+                        <div className="space-y-2">
+                          <div className={`flex items-center justify-center text-lg font-bold ${ratingColor}`}>
+                            <Star className="h-5 w-5 fill-current mr-1" />
+                            {product.rating}/5
+                          </div>
+                          <div className="text-sm text-gray-600">{product.reviews} verified reviews</div>
+                          <div className="text-xs">
+                            {product.rating >= 4.5 ? '🏆 Excellent' :
+                              product.rating >= 4.0 ? '👍 Very Good' :
+                                product.rating >= 3.5 ? '👌 Good' : '⚠️ Average'}
+                          </div>
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+
+                {/* Availability & Stock */}
+                <tr className="border-b hover:bg-green-50">
+                  <td className="p-4 font-medium text-green-900 bg-green-50">📦 Availability</td>
+                  {comparedProducts.map((product) => (
+                    <td key={`${product.id}-stock`} className="p-4 text-center">
+                      <div className="space-y-2">
+                        <Badge
+                          variant={product.inStock ? "default" : "destructive"}
+                          className={product.inStock ? "bg-green-500" : ""}
+                        >
+                          {product.inStock ? "✅ In Stock" : "❌ Out of Stock"}
+                        </Badge>
+                        <div className="text-xs text-gray-600">
+                          {product.inStock ? "Ready to ship" : "Currently unavailable"}
+                        </div>
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Product Features */}
+                <tr className="border-b hover:bg-purple-50">
+                  <td className="p-4 font-medium text-purple-900 bg-purple-50">🔧 Key Features</td>
+                  {comparedProducts.map((product) => {
+                    // Generate features based on product category
+                    const getFeatures = () => {
+                      switch (product.category) {
+                        case 'mobiles':
+                          return ['📱 Smartphone', '📷 Camera Phone', '🔋 Long Battery', '📶 5G Ready']
+                        case 'laptops':
+                          return ['💻 Portable', '⚡ Fast Performance', '🔋 All-day Battery', '💾 Large Storage']
+                        case 'tvs':
+                          return ['📺 Smart TV', '🎬 4K Display', '🔊 Surround Sound', '📡 Streaming Ready']
+                        case 'acs':
+                          return ['❄️ Fast Cooling', '⚡ Energy Efficient', '🌿 Eco-friendly', '📱 Smart Control']
+                        case 'fans':
+                          return ['💨 High Speed', '🔇 Silent Operation', '⚡ Energy Saving', '💪 Durable Motor']
+                        case 'coolers':
+                          return ['❄️ Powerful Cooling', '💧 Large Tank', '🌿 Eco-friendly', '🔇 Low Noise']
+                        default:
+                          return ['⭐ Premium Quality', '💪 Durable', '⚡ Energy Efficient', '🛡️ Warranty']
+                      }
+                    }
+
+                    return (
+                      <td key={`${product.id}-features`} className="p-4 text-center">
+                        <div className="space-y-1">
+                          {getFeatures().map((feature, index) => (
+                            <div key={index} className="text-xs text-gray-700 bg-gray-100 rounded px-2 py-1 mx-1 inline-block mb-1">
+                              {feature}
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+
+                {/* Smart Value Analysis */}
+                <tr className="border-b hover:bg-indigo-50">
+                  <td className="p-4 font-medium text-indigo-900 bg-indigo-50">🎯 Smart Value Score</td>
+                  {comparedProducts.map((product) => {
+                    // Advanced value calculation
+                    const prices = comparedProducts.map(p => p.price)
+                    const ratings = comparedProducts.map(p => p.rating)
+                    const maxPrice = Math.max(...prices)
+                    const minPrice = Math.min(...prices)
+                    const avgRating = ratings.reduce((a, b) => a + b, 0) / ratings.length
+
+                    // Normalized scores (0-1)
+                    const priceScore = maxPrice === minPrice ? 0.5 :
+                      (maxPrice - product.price) / (maxPrice - minPrice) // Lower price = higher score
+                    const ratingScore = product.rating / 5 // Rating out of 5
+                    const popularityScore = Math.min(product.reviews / 200, 1) // More reviews = more popular
+                    const discountScore = product.originalPrice > product.price ?
+                      ((product.originalPrice - product.price) / product.originalPrice) : 0
+
+                    // Weighted final score
+                    const finalScore = (
+                      ratingScore * 0.35 +      // 35% rating quality
+                      priceScore * 0.25 +       // 25% price competitiveness
+                      popularityScore * 0.2 +   // 20% popularity
+                      discountScore * 0.2       // 20% discount value
+                    ) * 10
+
+                    const scoreColor = finalScore >= 8 ? 'text-green-600' :
+                      finalScore >= 6.5 ? 'text-yellow-600' : 'text-red-600'
+                    const badge = finalScore >= 8.5 ? '🏆 Best Value' :
+                      finalScore >= 7.5 ? '⭐ Great Choice' :
+                        finalScore >= 6 ? '👍 Good Option' : '⚠️ Consider Others'
+
+                    return (
+                      <td key={`${product.id}-value`} className="p-4 text-center">
+                        <div className="space-y-2">
+                          <div className={`text-3xl font-bold ${scoreColor}`}>
+                            {finalScore.toFixed(1)}/10
+                          </div>
+                          <div className="text-xs font-medium text-gray-700">{badge}</div>
+                          <div className="text-xs text-gray-500 space-y-1">
+                            <div>Quality: {(ratingScore * 10).toFixed(1)}/10</div>
+                            <div>Price: {(priceScore * 10).toFixed(1)}/10</div>
+                            <div>Popular: {(popularityScore * 10).toFixed(1)}/10</div>
+                          </div>
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+
+                {/* Detailed Description */}
+                <tr className="border-b hover:bg-gray-50">
+                  <td className="p-4 font-medium text-gray-900 bg-gray-50">📝 Description</td>
+                  {comparedProducts.map((product) => (
+                    <td key={`${product.id}-description`} className="p-4 text-center">
+                      <div className="text-sm text-gray-600 max-w-[200px] mx-auto leading-relaxed">
+                        {product.description}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+
+                {/* Recommendation */}
+                <tr className="border-b hover:bg-gradient-to-r hover:from-blue-50 hover:to-green-50">
+                  <td className="p-4 font-medium text-gray-900 bg-gradient-to-r from-blue-50 to-green-50">🎖️ Our Recommendation</td>
+                  {comparedProducts.map((product) => {
+                    // Calculate recommendation based on multiple factors
+                    const isHighRated = product.rating >= 4.3
+                    const isGoodValue = product.originalPrice > product.price
+                    const isPopular = product.reviews >= 100
+                    const isAvailable = product.inStock
+
+                    const getRecommendation = () => {
+                      if (!isAvailable) return { text: "⏳ Wait for Restock", color: "text-gray-600", bg: "bg-gray-100" }
+                      if (isHighRated && isGoodValue && isPopular) return { text: "🥇 Top Choice!", color: "text-green-700", bg: "bg-green-100" }
+                      if (isHighRated && isGoodValue) return { text: "⭐ Excellent Pick", color: "text-blue-700", bg: "bg-blue-100" }
+                      if (isHighRated) return { text: "👍 Quality Choice", color: "text-purple-700", bg: "bg-purple-100" }
+                      if (isGoodValue) return { text: "💰 Great Deal", color: "text-orange-700", bg: "bg-orange-100" }
+                      return { text: "🤔 Consider Options", color: "text-yellow-700", bg: "bg-yellow-100" }
+                    }
+
+                    const rec = getRecommendation()
+
+                    return (
+                      <td key={`${product.id}-recommendation`} className="p-4 text-center">
+                        <div className={`${rec.bg} ${rec.color} px-3 py-2 rounded-lg font-medium text-sm mx-auto max-w-[160px]`}>
+                          {rec.text}
+                        </div>
+                      </td>
+                    )
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Enhanced Action Buttons */}
+          <div className="flex gap-3 pt-6 border-t-2 border-gray-200">
+            {comparedProducts.map((product, index) => (
+              <div key={product.id} className="flex-1">
+                <Button
+                  className={`w-full h-12 text-sm font-medium ${index === 0 ? 'bg-green-600 hover:bg-green-700' :
+                      index === 1 ? 'bg-blue-600 hover:bg-blue-700' :
+                        'bg-purple-600 hover:bg-purple-700'
+                    }`}
+                  onClick={() => {
+                    addToCart(product)
+                    setShowComparisonModal(false)
+                    toast({
+                      title: "Added to Cart!",
+                      description: `${product.name} has been added to your cart.`,
+                    })
+                  }}
+                  disabled={!product.inStock}
+                >
+                  {product.inStock ? (
+                    <>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Add {product.name.split(' ')[0]} to Cart
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="h-4 w-4 mr-2" />
+                      Out of Stock
+                    </>
+                  )}
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          {/* Comparison Tips */}
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <h4 className="font-medium text-blue-900 mb-2">💡 Comparison Tips:</h4>
+            <ul className="text-sm text-blue-800 space-y-1">
+              <li>• <strong>Smart Value Score</strong> combines price, quality, popularity, and discounts</li>
+              <li>• Check <strong>customer ratings</strong> for real user experiences</li>
+              <li>• Consider <strong>availability</strong> and delivery times for your needs</li>
+              <li>• Look for <strong>features</strong> that matter most for your use case</li>
+            </ul>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
