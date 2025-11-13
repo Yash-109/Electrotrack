@@ -132,7 +132,8 @@ export async function PUT(request: NextRequest) {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      userId
+      userId,
+      orderDetails
     } = body
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -188,11 +189,11 @@ export async function PUT(request: NextRequest) {
       bank: payment.bank || null,
       wallet: payment.wallet || null,
       vpa: payment.vpa || null, // UPI VPA
-      items: tempOrder.orderDetails?.items || [],
-      shippingAddress: tempOrder.orderDetails?.shippingAddress || {},
-      subtotal: tempOrder.orderDetails?.subtotal || 0,
-      tax: tempOrder.orderDetails?.tax || 0,
-      shipping: tempOrder.orderDetails?.shipping || 0,
+      items: orderDetails?.items || tempOrder.orderDetails?.items || [],
+      shippingAddress: orderDetails?.shippingAddress || tempOrder.orderDetails?.shippingAddress || {},
+      subtotal: orderDetails?.subtotal || tempOrder.orderDetails?.subtotal || 0,
+      tax: orderDetails?.tax || tempOrder.orderDetails?.tax || 0,
+      shipping: orderDetails?.shipping || tempOrder.orderDetails?.shipping || 0,
       total: tempOrder.amount,
       currency: tempOrder.currency,
       paymentStatus: 'completed',

@@ -212,6 +212,14 @@ export default function PaymentPage() {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 userId: currentUser.email,
+                orderDetails: {
+                  items: checkoutData.items,
+                  subtotal: checkoutData.subtotal,
+                  tax: checkoutData.tax,
+                  shipping: checkoutData.shipping,
+                  total: checkoutData.total,
+                  shippingAddress: JSON.parse(localStorage.getItem("radhika_shipping_data") || '{}')
+                }
               }),
             })
 
@@ -219,18 +227,15 @@ export default function PaymentPage() {
 
             if (verifyData.success) {
               // Create transaction in admin system for successful online payment
-              const orderData = JSON.parse(localStorage.getItem("radhika_current_order") || '{}')
-              if (orderData.cartData) {
-                addOnlineSale({
-                  description: `Order: ${orderData.cartData.items.map((item: any) => `${item.name} (x${item.quantity})`).join(', ')}`,
-                  category: "Mixed Electronics",
-                  amount: orderData.cartData.subtotal + orderData.cartData.tax + (orderData.deliveryMethod === "express" ? 1000 : 500),
-                  paymentMethod: "Online",
-                  customer: orderData.fullName,
-                  orderId: verifyData.order.orderId,
-                  orderDate: new Date().toISOString().split("T")[0]
-                })
-              }
+              addOnlineSale({
+                description: `Order: ${checkoutData.items.map((item: any) => `${item.name} (x${item.quantity})`).join(', ')}`,
+                category: "Mixed Electronics",
+                amount: checkoutData.total,
+                paymentMethod: "Online",
+                customer: currentUser.name || currentUser.email.split('@')[0],
+                orderId: verifyData.order.orderId,
+                orderDate: new Date().toISOString().split("T")[0]
+              })
 
               // Clear checkout data
               localStorage.removeItem("radhika_checkout_cart")
@@ -502,22 +507,31 @@ export default function PaymentPage() {
 
                   </RadioGroup>
 
-                  {/* Security Info */}
-                  <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
                     <div className="flex items-center space-x-2">
-                      <Shield className="h-5 w-5 text-green-600" />
-                      <p className="text-sm text-green-800 font-semibold">100% Secure Payment</p>
+                      <Shield className="h-5 w-5 text-blue-600" />
+                      <p className="text-sm text-blue-800 font-semibold">100% Secure Payment</p>
                     </div>
-                    <p className="text-sm text-green-700 mt-1">
+                    <p className="text-sm text-blue-700 mt-1">
                       Your payment information is encrypted using 256-bit SSL technology.
                       All transactions are processed securely through Razorpay.
                     </p>
                   </div>
 
+                  {/* Loading Status */}
+                  {!razorpayLoaded && (
+                    <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-600 border-t-transparent"></div>
+                        <p className="text-sm text-yellow-800 font-medium">Loading payment system...</p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Payment Button */}
                   <Button
                     onClick={handlePayment}
-                    disabled={isProcessing}
+                    disabled={isProcessing || (!razorpayLoaded && paymentMethod !== 'cod')}
                     className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700"
                   >
                     {isProcessing ? (
@@ -525,10 +539,15 @@ export default function PaymentPage() {
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                         <span>Processing...</span>
                       </div>
+                    ) : !razorpayLoaded && paymentMethod !== 'cod' ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Loading Payment System...</span>
+                      </div>
                     ) : (
                       <div className="flex items-center space-x-2">
                         <Banknote className="h-5 w-5" />
-                        <span>Pay ₹{checkoutData.total.toLocaleString()}</span>
+                        <span>{paymentMethod === 'cod' ? 'Place Order' : `Pay ₹${checkoutData.total.toLocaleString()}`}</span>
                       </div>
                     )}
                   </Button>
