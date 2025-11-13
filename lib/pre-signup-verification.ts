@@ -3,6 +3,7 @@
 
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
+import { log } from '@/lib/logger'
 
 // Email configuration
 const EMAIL_CONFIG = {
@@ -25,13 +26,13 @@ function getTransporter(): nodemailer.Transporter {
       // Verify connection on first use
       transporter.verify((error) => {
         if (error) {
-          console.error('Email transporter verification failed:', error)
+          log.error('Email transporter verification failed', error, 'pre-signup-verification')
         } else {
-          console.log('Email transporter ready')
+          log.info('Email transporter ready', { service: EMAIL_CONFIG.service }, 'pre-signup-verification')
         }
       })
     } catch (error) {
-      console.error('Failed to create email transporter:', error)
+      log.error('Failed to create email transporter', error, 'pre-signup-verification')
       throw new Error('Email service unavailable')
     }
   }
@@ -220,12 +221,12 @@ export async function sendVerificationCode(
     const transporter = getTransporter()
     const result = await transporter.sendMail(mailOptions)
 
-    console.log('Verification code sent successfully:', {
+    log.info('Verification code sent successfully', {
       to: toEmail,
       code: verificationCode,
       messageId: result.messageId,
       timestamp: new Date().toISOString()
-    })
+    }, 'pre-signup-verification')
 
     return {
       success: true,
@@ -233,11 +234,11 @@ export async function sendVerificationCode(
     }
 
   } catch (error: any) {
-    console.error('Failed to send verification code:', {
+    log.error('Failed to send verification code', {
       to: toEmail,
       error: error.message,
       timestamp: new Date().toISOString()
-    })
+    }, 'pre-signup-verification')
 
     return {
       success: false,
