@@ -784,10 +784,13 @@ export default function DashboardPage() {
           {/* Filters */}
           <div className="flex flex-col gap-4 mb-6">
             {/* Search Bar (wrapped in a non-submitting form to avoid accidental Enter submits) */}
-            <form onSubmit={(e) => e.preventDefault()} className="relative w-full" aria-label="Search form">
+            <form onSubmit={(e) => e.preventDefault()} className="relative w-full" aria-label="Search form" role="search">
+              <label htmlFor="dashboard-search" className="sr-only">Search products</label>
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" aria-hidden="true" />
               <Input
                 placeholder="Search products..."
+                id="dashboard-search"
+                aria-controls="search-suggestions"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value)
@@ -830,6 +833,7 @@ export default function DashboardPage() {
               {/* Search Suggestions Dropdown */}
               {showSearchSuggestions && searchSuggestions.length > 0 && (
                 <div
+                  id="search-suggestions"
                   className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto"
                   role="listbox"
                   aria-label="Search suggestions"
