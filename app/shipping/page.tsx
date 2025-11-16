@@ -52,6 +52,7 @@ export default function ShippingPage() {
   const [isNewAddress, setIsNewAddress] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
+  const [isPageLoading, setIsPageLoading] = useState(true)
 
   const router = useRouter()
   const { toast } = useToast()
@@ -142,7 +143,9 @@ export default function ShippingPage() {
       }
     }
 
-    loadUserProfile()
+    loadUserProfile().finally(() => {
+      setIsPageLoading(false)
+    })
   }, [router, toast])
 
   const handleAddressSelection = (addressId: string) => {
@@ -335,14 +338,16 @@ export default function ShippingPage() {
     }
   }
 
-  if (!cartData || !currentUser) {
+  if (!cartData || !currentUser || isPageLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p>Loading checkout...</p>
+            <p className="text-gray-600">
+              {isPageLoading ? "Loading shipping information..." : "Loading checkout..."}
+            </p>
           </div>
         </div>
       </div>
