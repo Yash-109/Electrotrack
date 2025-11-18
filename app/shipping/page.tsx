@@ -362,7 +362,7 @@ export default function ShippingPage() {
       <Header />
 
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">Shipping & Payment</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-8">Checkout - Shipping & Payment</h1>
 
         {/* User Info Alert */}
         <Alert className="mb-6 border-green-200 bg-green-50">
