@@ -58,6 +58,8 @@ export default function ShippingPage() {
   const { toast } = useToast()
   const { addOnlineSale } = useAdminIntegration()
 
+  // Calculate delivery fee based on selected delivery method
+
   useEffect(() => {
     // Check if user is logged in
     const user = userAuth.getCurrentUser()
@@ -186,6 +188,9 @@ export default function ShippingPage() {
     if (!shippingData.fullName.trim()) newErrors.fullName = "Full name is required"
     if (!shippingData.email.trim()) newErrors.email = "Email is required"
     if (!shippingData.phone.trim()) newErrors.phone = "Phone number is required"
+    if (shippingData.phone.trim() && !/^[0-9]{10}$/.test(shippingData.phone.replace(/\s+/g, ''))) {
+      newErrors.phone = "Phone number must be 10 digits"
+    }
     if (!shippingData.address.trim()) newErrors.address = "Address is required"
     if (!shippingData.city.trim()) newErrors.city = "City is required"
     if (!shippingData.pincode.trim()) newErrors.pincode = "Pincode is required"
