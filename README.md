@@ -89,6 +89,7 @@ A modern, full-stack e-commerce platform for electronics retail, built with Next
 - Node.js 18+ installed
 - MongoDB running locally or remote connection
 - Gmail account with app password for email service
+- Git installed for version control
 
 ### Setup Steps
 
