@@ -187,6 +187,9 @@ export default function ShippingPage() {
 
     if (!shippingData.fullName.trim()) newErrors.fullName = "Full name is required"
     if (!shippingData.email.trim()) newErrors.email = "Email is required"
+    if (shippingData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingData.email)) {
+      newErrors.email = "Please enter a valid email address"
+    }
     if (!shippingData.phone.trim()) newErrors.phone = "Phone number is required"
     if (shippingData.phone.trim() && !/^[0-9]{10}$/.test(shippingData.phone.replace(/\s+/g, ''))) {
       newErrors.phone = "Phone number must be 10 digits"
