@@ -196,7 +196,13 @@ export default function ShippingPage() {
     }
     if (!shippingData.address.trim()) newErrors.address = "Address is required"
     if (!shippingData.city.trim()) newErrors.city = "City is required"
-    if (!shippingData.pincode.trim()) newErrors.pincode = "Pincode is required"
+    if (!shippingData.pincode.trim()) {
+      newErrors.pincode = "Pincode is required"
+    } else if (!/^[0-9]{6}$/.test(shippingData.pincode)) {
+      newErrors.pincode = "Pincode must be 6 digits"
+    } else if (!shippingData.pincode.startsWith('39')) {
+      newErrors.pincode = "We currently serve only Gujarat (pincode starting with 39)"
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
