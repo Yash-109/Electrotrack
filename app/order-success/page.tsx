@@ -174,7 +174,11 @@ function OrderSuccessContent() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Order ID</p>
-                  <p className="font-semibold">{orderData.orderId}</p>
+                  <p className="font-semibold text-blue-600 hover:text-blue-800 cursor-pointer"
+                    onClick={() => navigator.clipboard.writeText(orderData.orderId)}
+                    title="Click to copy Order ID">
+                    {orderData.orderId}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Order Date</p>
@@ -227,8 +231,12 @@ function OrderSuccessContent() {
                 </div>
                 {orderData.paymentId && (
                   <div className="col-span-2">
-                    <p className="text-sm text-gray-600">Payment ID</p>
-                    <p className="font-mono text-sm bg-gray-100 p-2 rounded">{orderData.paymentId}</p>
+                    <p className="text-sm text-gray-600">Payment ID / Tracking Reference</p>
+                    <p className="font-mono text-sm bg-gray-100 p-2 rounded hover:bg-gray-200 cursor-pointer"
+                      onClick={() => navigator.clipboard.writeText(orderData.paymentId)}
+                      title="Click to copy Payment ID">
+                      {orderData.paymentId}
+                    </p>
                   </div>
                 )}
               </div>
