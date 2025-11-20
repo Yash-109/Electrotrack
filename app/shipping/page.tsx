@@ -557,13 +557,18 @@ export default function ShippingPage() {
                       </Label>
                     </div>
 
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                    <div className="flex items-center space-x-2 p-3 border rounded-lg border-orange-200 bg-orange-50">
                       <RadioGroupItem value="express" id="express" />
                       <Label htmlFor="express" className="flex-1 cursor-pointer">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">Express Delivery</p>
-                            <p className="text-sm text-gray-600">2-3 business days</p>
+                            <div className="flex items-center space-x-2">
+                              <p className="font-medium">Express Delivery</p>
+                              <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+                                Same Day Available
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600">2-3 business days (Order before 2 PM for same day)</p>
                           </div>
                           <span className="font-medium">₹1,000</span>
                         </div>
