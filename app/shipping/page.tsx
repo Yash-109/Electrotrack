@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Truck, CreditCard, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
@@ -310,7 +311,13 @@ export default function ShippingPage() {
 
             toast({
               title: "Order placed successfully!",
-              description: `Your order ${result.orderId} will be delivered within 3-5 business days.`,
+              description: (
+                <div className="space-y-1">
+                  <p>Your order <strong>{result.orderId}</strong> will be delivered within 3-5 business days.</p>
+                  <p className="text-xs text-gray-600">Track your order: Copy Order ID and contact support</p>
+                </div>
+              ),
+              duration: 8000,
             })
 
             // Clear cart only after successful order and redirect
