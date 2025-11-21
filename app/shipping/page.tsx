@@ -18,7 +18,6 @@ import { Truck, CreditCard, AlertCircle, CheckCircle, MapPin } from "lucide-reac
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
 import { useAdminIntegration } from "@/hooks/use-admin-integration"
-import Script from "next/script"
 
 interface CartData {
   items: Array<{
@@ -65,7 +64,7 @@ export default function ShippingPage() {
 
   const verifyAddress = async () => {
     try {
-      // Simple validation without Google Maps dependency
+      // Check if all fields are filled
       if (!shippingData.address.trim() || !shippingData.city.trim() || !shippingData.pincode.trim()) {
         toast({
           title: "Incomplete address",
@@ -75,8 +74,11 @@ export default function ShippingPage() {
         return
       }
 
-      // Basic pincode validation for Gujarat
+      const address = shippingData.address.trim()
+      const city = shippingData.city.trim()
       const pincode = shippingData.pincode.trim()
+
+      // Validate pincode format
       if (!/^[0-9]{6}$/.test(pincode)) {
         toast({
           title: "Invalid pincode",
@@ -86,20 +88,105 @@ export default function ShippingPage() {
         return
       }
 
-      // Check if pincode starts with Gujarat prefixes (36, 38, 39)
-      const gujaratPincodes = ['36', '38', '39']
-      const pincodePrefix = pincode.substring(0, 2)
+      // Check Gujarat pincode ranges (more comprehensive)
+      const gujaratPincodeRanges = [
+        { start: 360001, end: 370999 }, // Rajkot, Jamnagar, Porbandar regions
+        { start: 380001, end: 389999 }, // Ahmedabad, Gandhinagar regions
+        { start: 390001, end: 399999 }  // Vadodara, Bharuch, Surat regions
+      ]
 
-      if (!gujaratPincodes.includes(pincodePrefix)) {
+      const pincodeNum = parseInt(pincode)
+      const isValidGujaratPincode = gujaratPincodeRanges.some(range =>
+        pincodeNum >= range.start && pincodeNum <= range.end
+      )
+
+      if (!isValidGujaratPincode) {
         toast({
-          title: "Service area limitation",
-          description: "We currently only serve Gujarat. Please check if your pincode is correct.",
+          title: "Invalid Gujarat pincode",
+          description: "Please enter a valid Gujarat pincode (360xxx-370xxx, 380xxx-389xxx, 390xxx-399xxx).",
           variant: "destructive",
         })
         return
       }
 
-      // Check if state is Gujarat
+      // Validate address structure and content
+      if (address.length < 20) {
+        toast({
+          title: "Address too brief",
+          description: "Please provide complete address with house number, building/society name, and street.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Check for house/flat number at start
+      if (!/^\d+/.test(address) && !/^[A-Za-z]-?\d+/.test(address)) {
+        toast({
+          title: "Missing house/flat number",
+          description: "Address must start with house/flat number (e.g., '123' or 'A-4').",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Validate against common fake patterns
+      const fakePatterns = [
+        /^(abc|xyz|test|demo|sample)/i,
+        /apartment$/i,
+        /^123 main/i,
+        /^[a-z]{1,3}\s*(apartment|apt|building|society)$/i
+      ]
+
+      if (fakePatterns.some(pattern => pattern.test(address))) {
+        toast({
+          title: "Invalid address format",
+          description: "Please provide your real address with proper building and street names.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Enhanced Gujarat city validation with common misspellings
+      const gujaratCitiesMap = {
+        'ahmedabad': ['amdavad', 'ahmadabad'],
+        'vadodara': ['baroda', 'vadodra'],
+        'surat': ['suart'],
+        'rajkot': ['rajkot'],
+        'bhavnagar': ['bhavnager'],
+        'jamnagar': ['jamnager'],
+        'gandhinagar': ['gandinagar'],
+        'anand': ['anand'],
+        'bharuch': ['bharuch', 'broach'],
+        'navsari': ['navsari'],
+        'vapi': ['vapi'],
+        'mehsana': ['mahesana'],
+        'palanpur': ['palanpur'],
+        'morbi': ['morbi'],
+        'bhuj': ['bhuj'],
+        'surendranagar': ['surendranagar'],
+        'godhra': ['godhra'],
+        'dahod': ['dahod'],
+        'veraval': ['veraval'],
+        'porbandar': ['porbandar'],
+        'junagadh': ['junagadh']
+      }
+
+      const cityLower = city.toLowerCase()
+      const isCityValid = Object.entries(gujaratCitiesMap).some(([mainCity, variants]) =>
+        cityLower === mainCity || variants.some(variant => cityLower === variant) ||
+        cityLower.includes(mainCity) || mainCity.includes(cityLower)
+      )
+
+      if (!isCityValid) {
+        toast({
+          title: "Invalid Gujarat city",
+          description: "Please enter a valid Gujarat city name. Check spelling carefully.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Check state consistency
       if (shippingData.state.toLowerCase() !== 'gujarat') {
         toast({
           title: "State mismatch",
@@ -109,8 +196,21 @@ export default function ShippingPage() {
         return
       }
 
-      // Simulate verification delay for better UX
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Address quality assessment
+      const addressWords = address.toLowerCase().split(/\s+/).filter(word => word.length > 2)
+      const structureKeywords = ['society', 'apartment', 'complex', 'building', 'street', 'road', 'lane', 'nagar', 'park', 'colony', 'tower', 'plaza', 'avenue', 'cross', 'circle', 'scheme']
+      const hasProperStructure = addressWords.length >= 4 &&
+        structureKeywords.some(keyword => addressWords.some(word => word.includes(keyword)))
+
+      if (!hasProperStructure) {
+        toast({
+          title: "Address needs proper structure",
+          description: "Include building/society name, street/road name for accurate delivery.",
+          variant: "destructive",
+        })
+        return
+      }      // Simulate verification delay
+      await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Successful verification
       setIsAddressVerified(true)
@@ -121,10 +221,9 @@ export default function ShippingPage() {
       })
       toast({
         title: "Address verified ✓",
-        description: "Address verified successfully for delivery in Gujarat",
+        description: `Verified delivery address: ${address.slice(0, 30)}... in ${city}`,
         variant: "default",
       })
-      console.log('Address verification successful for:', shippingData.address)
 
     } catch (error) {
       console.error('Address verification error:', error)
@@ -462,18 +561,6 @@ export default function ShippingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Google Maps API Script */}
-      <Script
-        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBhubaXWcJWRGV7wm8d7_FqxOBuRsSdmL8&libraries=places"
-        onLoad={() => {
-          console.log('Maps script loaded (not used)')
-        }}
-        onError={() => {
-          console.log('Maps script failed (using simple validation instead)')
-        }}
-        strategy="lazyOnload"
-      />
-
       <Header />
 
       <div className="container mx-auto px-4 py-8">
