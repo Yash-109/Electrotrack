@@ -337,7 +337,9 @@ export default function ShippingPage() {
               city: shippingData.city,
               state: shippingData.state,
               pincode: shippingData.pincode,
-              phone: shippingData.phone
+              phone: shippingData.phone,
+              coordinates: selectedCoordinates, // Add coordinates for delivery tracking
+              isVerified: isAddressVerified
             },
             paymentMethod: "Cash on Delivery",
             total: finalTotal,
@@ -576,10 +578,45 @@ export default function ShippingPage() {
                         <Textarea
                           id="address"
                           value={shippingData.address}
-                          onChange={(e) => handleInputChange("address", e.target.value)}
+                          onChange={(e) => {
+                            handleInputChange("address", e.target.value)
+                            setIsAddressVerified(false) // Reset verification when address changes
+                          }}
                           className={errors.address ? "border-red-500" : ""}
+                          placeholder="Enter complete street address with house number, street name, and landmark"
                         />
                         {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+
+                        {/* Address Verification Button */}
+                        <div className="mt-3 space-y-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={verifyAddress}
+                            disabled={!shippingData.address.trim() || !shippingData.city.trim() || !shippingData.pincode.trim() || !isGoogleMapsLoaded}
+                            className={isAddressVerified ? "border-green-500 text-green-700" : ""}
+                          >
+                            {isAddressVerified ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                                Address Verified
+                              </>
+                            ) : (
+                              <>
+                                <MapPin className="h-4 w-4 mr-2" />
+                                Verify Address
+                              </>
+                            )}
+                          </Button>
+
+                          {isAddressVerified && (
+                            <p className="text-sm text-green-600 flex items-center">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Address verified and ready for tracking
+                            </p>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
