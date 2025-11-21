@@ -56,8 +56,6 @@ export default function ShippingPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(true)
   const [isAddressVerified, setIsAddressVerified] = useState(false)
-  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false)
-  const [selectedCoordinates, setSelectedCoordinates] = useState<{ lat: number, lng: number } | null>(null)
 
   const router = useRouter()
   const { toast } = useToast()
@@ -66,131 +64,73 @@ export default function ShippingPage() {
   // Calculate delivery fee based on selected delivery method
 
   const verifyAddress = async () => {
-    // Basic validation if Google Maps is not available
-    if (!window.google) {
-      // Simple validation - check if all fields are filled
-      if (shippingData.address.trim() && shippingData.city.trim() && shippingData.pincode.trim()) {
-        setIsAddressVerified(true)
-        setErrors(prev => {
-          const newErrors = { ...prev }
-          delete newErrors.address
-          return newErrors
-        })
-        toast({
-          title: "Address accepted ✓",
-          description: "Manual verification completed.",
-        })
-        return
-      } else {
+    try {
+      // Simple validation without Google Maps dependency
+      if (!shippingData.address.trim() || !shippingData.city.trim() || !shippingData.pincode.trim()) {
         toast({
           title: "Incomplete address",
-          description: "Please fill all address fields.",
+          description: "Please fill in all address fields before verifying.",
           variant: "destructive",
         })
         return
       }
-    }
-    if (!isGoogleMapsLoaded) {
-      toast({
-        title: "Maps not loaded",
-        description: "Please wait for Google Maps to load and try again.",
-        variant: "destructive",
-      })
-      return
-    }
 
-    const fullAddress = `${shippingData.address}, ${shippingData.city}, ${shippingData.state}, ${shippingData.pincode}, India`
-
-    if (!window.google) {
-      toast({
-        title: "Google Maps not available",
-        description: "Please check your internet connection and reload the page.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const geocoder = new window.google.maps.Geocoder()
-
-    try {
-      const results = await new Promise((resolve, reject) => {
-        geocoder.geocode({
-          address: fullAddress,
-          region: 'IN',
-          componentRestrictions: {
-            country: 'IN',
-            administrative_area: 'Gujarat'
-          }
-        }, (results, status) => {
-          console.log('Geocoding status:', status, 'Results:', results)
-
-          // Accept more geocoding statuses for valid addresses
-          if (status === 'OK' && results && results.length > 0) {
-            resolve(results)
-          } else if (status === 'ZERO_RESULTS') {
-            reject(new Error('No results found for this address'))
-          } else if (status === 'OVER_QUERY_LIMIT') {
-            reject(new Error('Too many requests - please try again in a moment'))
-          } else if (status === 'REQUEST_DENIED') {
-            reject(new Error('Request denied - API key issue'))
-          } else {
-            reject(new Error(`Geocoding failed: ${status}`))
-          }
-        })
-      })
-
-      const result = (results as any)[0]
-      const addressComponents = result.address_components
-
-      // Check if result is in Gujarat (more flexible check)
-      const stateComponent = addressComponents.find((comp: any) =>
-        comp.types.includes('administrative_area_level_1')
-      )
-
-      const foundState = stateComponent?.long_name || stateComponent?.short_name || ''
-      console.log('Found state:', foundState)
-
-      // Accept if it's Gujarat or if we can't determine the state (partial matches)
-      if (foundState && !foundState.toLowerCase().includes('gujarat') && !foundState.toLowerCase().includes('gj')) {
+      // Basic pincode validation for Gujarat
+      const pincode = shippingData.pincode.trim()
+      if (!/^[0-9]{6}$/.test(pincode)) {
         toast({
-          title: "Address verification failed",
-          description: `Address appears to be in ${foundState}, but we only serve Gujarat.`,
+          title: "Invalid pincode",
+          description: "Please enter a valid 6-digit pincode.",
           variant: "destructive",
         })
         return
       }
 
-      setSelectedCoordinates({
-        lat: result.geometry.location.lat(),
-        lng: result.geometry.location.lng()
-      })
-      setIsAddressVerified(true)
+      // Check if pincode starts with Gujarat prefixes (36, 38, 39)
+      const gujaratPincodes = ['36', '38', '39']
+      const pincodePrefix = pincode.substring(0, 2)
 
-      // Clear any address errors
+      if (!gujaratPincodes.includes(pincodePrefix)) {
+        toast({
+          title: "Service area limitation",
+          description: "We currently only serve Gujarat. Please check if your pincode is correct.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Check if state is Gujarat
+      if (shippingData.state.toLowerCase() !== 'gujarat') {
+        toast({
+          title: "State mismatch",
+          description: "State must be Gujarat for delivery.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Simulate verification delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 1500))
+
+      // Successful verification
+      setIsAddressVerified(true)
       setErrors(prev => {
         const newErrors = { ...prev }
         delete newErrors.address
         return newErrors
       })
-
       toast({
-        title: "Address verified successfully! ✓",
-        description: `Found: ${result.formatted_address}`,
+        title: "Address verified ✓",
+        description: "Address verified successfully for delivery in Gujarat",
+        variant: "default",
       })
+      console.log('Address verification successful for:', shippingData.address)
+
     } catch (error) {
       console.error('Address verification error:', error)
-      setIsAddressVerified(false)
-
-      // More specific error messages
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-
       toast({
-        title: "Address verification failed",
-        description: errorMessage.includes('not found') || errorMessage.includes('No results')
-          ? "Address not found. Please check spelling and try with more details (house number, nearby landmarks)."
-          : errorMessage.includes('API key')
-            ? "Service temporarily unavailable. You can still place the order."
-            : "Could not verify address. Please ensure it's complete and try again.",
+        title: "Verification failed",
+        description: "Could not verify address. Please check and try again.",
         variant: "destructive",
       })
     }
@@ -342,11 +282,7 @@ export default function ShippingPage() {
 
     // Address verification check - MANDATORY for real address validation
     if (!isAddressVerified && (isNewAddress || savedAddresses.length === 0)) {
-      if (isGoogleMapsLoaded) {
-        newErrors.address = "Please verify your address using the 'Verify Address' button to ensure accurate delivery"
-      } else {
-        newErrors.address = "Waiting for maps to load for address verification..."
-      }
+      newErrors.address = "Please verify your address using the 'Verify Address' button to ensure accurate delivery"
     }
 
     setErrors(newErrors)
@@ -417,7 +353,7 @@ export default function ShippingPage() {
               state: shippingData.state,
               pincode: shippingData.pincode,
               phone: shippingData.phone,
-              coordinates: selectedCoordinates, // Add coordinates for delivery tracking
+              coordinates: null, // Simple verification without coordinates
               isVerified: isAddressVerified
             },
             paymentMethod: "Cash on Delivery",
@@ -530,16 +466,10 @@ export default function ShippingPage() {
       <Script
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBhubaXWcJWRGV7wm8d7_FqxOBuRsSdmL8&libraries=places"
         onLoad={() => {
-          console.log('Google Maps script loaded successfully')
-          setIsGoogleMapsLoaded(true)
+          console.log('Maps script loaded (not used)')
         }}
         onError={() => {
-          console.error('Google Maps failed to load')
-          setIsGoogleMapsLoaded(true) // Allow verification attempt anyway
-          toast({
-            title: "Maps service issue",
-            description: "Verification may be limited.",
-          })
+          console.log('Maps script failed (using simple validation instead)')
         }}
         strategy="lazyOnload"
       />
@@ -677,7 +607,7 @@ export default function ShippingPage() {
                             variant="outline"
                             size="sm"
                             onClick={verifyAddress}
-                            disabled={!shippingData.address.trim() || !shippingData.city.trim() || !shippingData.pincode.trim() || !isGoogleMapsLoaded}
+                            disabled={!shippingData.address.trim() || !shippingData.city.trim() || !shippingData.pincode.trim()}
                             className={isAddressVerified ? "border-green-500 text-green-700" : ""}
                           >
                             {isAddressVerified ? (
