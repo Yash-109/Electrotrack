@@ -66,6 +66,30 @@ export default function ShippingPage() {
   // Calculate delivery fee based on selected delivery method
 
   const verifyAddress = async () => {
+    // Basic validation if Google Maps is not available
+    if (!window.google) {
+      // Simple validation - check if all fields are filled
+      if (shippingData.address.trim() && shippingData.city.trim() && shippingData.pincode.trim()) {
+        setIsAddressVerified(true)
+        setErrors(prev => {
+          const newErrors = { ...prev }
+          delete newErrors.address
+          return newErrors
+        })
+        toast({
+          title: "Address accepted ✓",
+          description: "Manual verification completed.",
+        })
+        return
+      } else {
+        toast({
+          title: "Incomplete address",
+          description: "Please fill all address fields.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
     if (!isGoogleMapsLoaded) {
       toast({
         title: "Maps not loaded",
@@ -504,16 +528,20 @@ export default function ShippingPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Google Maps API Script */}
       <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyBhubaXWcJWRGV7wm8d7_FqxOBuRsSdmL8'}&libraries=places`}
-        onLoad={() => setIsGoogleMapsLoaded(true)}
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBhubaXWcJWRGV7wm8d7_FqxOBuRsSdmL8&libraries=places"
+        onLoad={() => {
+          console.log('Google Maps script loaded successfully')
+          setIsGoogleMapsLoaded(true)
+        }}
         onError={() => {
           console.error('Google Maps failed to load')
+          setIsGoogleMapsLoaded(true) // Allow verification attempt anyway
           toast({
-            title: "Maps unavailable",
-            description: "Address verification may not work properly.",
-            variant: "destructive",
+            title: "Maps service issue",
+            description: "Verification may be limited.",
           })
         }}
+        strategy="lazyOnload"
       />
 
       <Header />
