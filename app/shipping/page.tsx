@@ -90,16 +90,51 @@ export default function ShippingPage() {
 
     try {
       const results = await new Promise((resolve, reject) => {
-        geocoder.geocode({ address: fullAddress }, (results, status) => {
+        geocoder.geocode({
+          address: fullAddress,
+          region: 'IN',
+          componentRestrictions: {
+            country: 'IN',
+            administrative_area: 'Gujarat'
+          }
+        }, (results, status) => {
+          console.log('Geocoding status:', status, 'Results:', results)
+
+          // Accept more geocoding statuses for valid addresses
           if (status === 'OK' && results && results.length > 0) {
             resolve(results)
+          } else if (status === 'ZERO_RESULTS') {
+            reject(new Error('No results found for this address'))
+          } else if (status === 'OVER_QUERY_LIMIT') {
+            reject(new Error('Too many requests - please try again in a moment'))
+          } else if (status === 'REQUEST_DENIED') {
+            reject(new Error('Request denied - API key issue'))
           } else {
-            reject(new Error('Address not found'))
+            reject(new Error(`Geocoding failed: ${status}`))
           }
         })
       })
 
       const result = (results as any)[0]
+      const addressComponents = result.address_components
+
+      // Check if result is in Gujarat (more flexible check)
+      const stateComponent = addressComponents.find((comp: any) =>
+        comp.types.includes('administrative_area_level_1')
+      )
+
+      const foundState = stateComponent?.long_name || stateComponent?.short_name || ''
+      console.log('Found state:', foundState)
+
+      // Accept if it's Gujarat or if we can't determine the state (partial matches)
+      if (foundState && !foundState.toLowerCase().includes('gujarat') && !foundState.toLowerCase().includes('gj')) {
+        toast({
+          title: "Address verification failed",
+          description: `Address appears to be in ${foundState}, but we only serve Gujarat.`,
+          variant: "destructive",
+        })
+        return
+      }
 
       setSelectedCoordinates({
         lat: result.geometry.location.lat(),
@@ -107,15 +142,31 @@ export default function ShippingPage() {
       })
       setIsAddressVerified(true)
 
+      // Clear any address errors
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors.address
+        return newErrors
+      })
+
       toast({
-        title: "Address verified successfully!",
-        description: "Your address has been confirmed and can be tracked for delivery.",
+        title: "Address verified successfully! ✓",
+        description: `Found: ${result.formatted_address}`,
       })
     } catch (error) {
+      console.error('Address verification error:', error)
       setIsAddressVerified(false)
+
+      // More specific error messages
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
       toast({
         title: "Address verification failed",
-        description: "Please enter a valid, complete address.",
+        description: errorMessage.includes('not found') || errorMessage.includes('No results')
+          ? "Address not found. Please check spelling and try with more details (house number, nearby landmarks)."
+          : errorMessage.includes('API key')
+            ? "Service temporarily unavailable. You can still place the order."
+            : "Could not verify address. Please ensure it's complete and try again.",
         variant: "destructive",
       })
     }
@@ -265,9 +316,13 @@ export default function ShippingPage() {
       newErrors.pincode = "We currently serve only Gujarat (pincode starting with 39)"
     }
 
-    // Address verification check
+    // Address verification check - MANDATORY for real address validation
     if (!isAddressVerified && (isNewAddress || savedAddresses.length === 0)) {
-      newErrors.address = "Please verify your address using the 'Verify Address' button"
+      if (isGoogleMapsLoaded) {
+        newErrors.address = "Please verify your address using the 'Verify Address' button to ensure accurate delivery"
+      } else {
+        newErrors.address = "Waiting for maps to load for address verification..."
+      }
     }
 
     setErrors(newErrors)
