@@ -14,10 +14,11 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Truck, CreditCard, AlertCircle } from "lucide-react"
+import { Truck, CreditCard, AlertCircle, CheckCircle, MapPin } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
 import { useAdminIntegration } from "@/hooks/use-admin-integration"
+import Script from "next/script"
 
 interface CartData {
   items: Array<{
@@ -54,6 +55,9 @@ export default function ShippingPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [isPageLoading, setIsPageLoading] = useState(true)
+  const [isAddressVerified, setIsAddressVerified] = useState(false)
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false)
+  const [selectedCoordinates, setSelectedCoordinates] = useState<{ lat: number, lng: number } | null>(null)
 
   const router = useRouter()
   const { toast } = useToast()
@@ -380,6 +384,20 @@ export default function ShippingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Google Maps API Script */}
+      <Script
+        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyBhubaXWcJWRGV7wm8d7_FqxOBuRsSdmL8'}&libraries=places`}
+        onLoad={() => setIsGoogleMapsLoaded(true)}
+        onError={() => {
+          console.error('Google Maps failed to load')
+          toast({
+            title: "Maps unavailable",
+            description: "Address verification may not work properly.",
+            variant: "destructive",
+          })
+        }}
+      />
+
       <Header />
 
       <div className="container mx-auto px-4 py-8">
