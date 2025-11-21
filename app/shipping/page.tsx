@@ -65,6 +65,62 @@ export default function ShippingPage() {
 
   // Calculate delivery fee based on selected delivery method
 
+  const verifyAddress = async () => {
+    if (!isGoogleMapsLoaded) {
+      toast({
+        title: "Maps not loaded",
+        description: "Please wait for Google Maps to load and try again.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const fullAddress = `${shippingData.address}, ${shippingData.city}, ${shippingData.state}, ${shippingData.pincode}, India`
+
+    if (!window.google) {
+      toast({
+        title: "Google Maps not available",
+        description: "Please check your internet connection and reload the page.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const geocoder = new window.google.maps.Geocoder()
+
+    try {
+      const results = await new Promise((resolve, reject) => {
+        geocoder.geocode({ address: fullAddress }, (results, status) => {
+          if (status === 'OK' && results && results.length > 0) {
+            resolve(results)
+          } else {
+            reject(new Error('Address not found'))
+          }
+        })
+      })
+
+      const result = (results as any)[0]
+
+      setSelectedCoordinates({
+        lat: result.geometry.location.lat(),
+        lng: result.geometry.location.lng()
+      })
+      setIsAddressVerified(true)
+
+      toast({
+        title: "Address verified successfully!",
+        description: "Your address has been confirmed and can be tracked for delivery.",
+      })
+    } catch (error) {
+      setIsAddressVerified(false)
+      toast({
+        title: "Address verification failed",
+        description: "Please enter a valid, complete address.",
+        variant: "destructive",
+      })
+    }
+  }
+
   useEffect(() => {
     // Check if user is logged in
     const user = userAuth.getCurrentUser()
@@ -207,6 +263,11 @@ export default function ShippingPage() {
       newErrors.pincode = "Pincode must be 6 digits"
     } else if (!shippingData.pincode.startsWith('39')) {
       newErrors.pincode = "We currently serve only Gujarat (pincode starting with 39)"
+    }
+
+    // Address verification check
+    if (!isAddressVerified && (isNewAddress || savedAddresses.length === 0)) {
+      newErrors.address = "Please verify your address using the 'Verify Address' button"
     }
 
     setErrors(newErrors)
