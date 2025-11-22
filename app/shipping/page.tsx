@@ -429,6 +429,9 @@ export default function ShippingPage() {
       }
       localStorage.setItem("radhika_current_order", JSON.stringify(orderData))
 
+      // Store shipping data separately for payment page
+      localStorage.setItem("radhika_shipping_data", JSON.stringify(shippingData))
+
       if (shippingData.paymentMethod === "online") {
         // Redirect to payment page
         router.push("/payment")
