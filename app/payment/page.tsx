@@ -547,7 +547,7 @@ export default function PaymentPage() {
                     ) : (
                       <div className="flex items-center space-x-2">
                         <Banknote className="h-5 w-5" />
-                        <span>{paymentMethod === 'cod' ? 'Place Order' : `Pay ₹${checkoutData.total.toLocaleString()}`}</span>
+                        <span>{paymentMethod === 'cod' ? 'Place Order' : `Pay ₹${checkoutData.total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`}</span>
                       </div>
                     )}
                   </Button>
@@ -570,7 +570,7 @@ export default function PaymentPage() {
                           <p className="font-medium truncate">{item.name}</p>
                           <p className="text-gray-600">Qty: {item.quantity}</p>
                         </div>
-                        <p className="font-medium">₹{(item.price * item.quantity).toLocaleString()}</p>
+                        <p className="font-medium">₹{(item.price * item.quantity).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
                       </div>
                     ))}
                   </div>
@@ -581,15 +581,15 @@ export default function PaymentPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Subtotal</span>
-                      <span>₹{checkoutData.subtotal.toLocaleString()}</span>
+                      <span>₹{checkoutData.subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Tax</span>
-                      <span>₹{checkoutData.tax.toLocaleString()}</span>
+                      <span>₹{checkoutData.tax.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Shipping</span>
-                      <span>₹{checkoutData.shipping.toLocaleString()}</span>
+                      <span>₹{checkoutData.shipping.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                     </div>
                   </div>
 
@@ -597,7 +597,7 @@ export default function PaymentPage() {
 
                   <div className="flex justify-between items-center font-semibold text-lg">
                     <span>Total</span>
-                    <span className="text-blue-600">₹{checkoutData.total.toLocaleString()}</span>
+                    <span className="text-blue-600">₹{checkoutData.total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                   </div>
 
                   {/* Delivery Info */}
