@@ -46,15 +46,30 @@ export default function CartPage() {
         // Load cart from database using new cart service
         try {
           const dbItems = await CartService.getCart(user.email)
-          const uiItems = dbItems.map((item, index) => ({
-            id: parseInt(item.id),
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image || '/placeholder.jpg',
-            category: item.category || 'Electronics',
-            productId: item.id
-          }))
+          console.log("=== CART LOADING DEBUG ===");
+          console.log("Items from database:", dbItems);
+
+          const uiItems = dbItems.map((item, index) => {
+            console.log(`DB Item ${index + 1}:`, {
+              id: item.id,
+              name: item.name,
+              image: item.image,
+              imageType: typeof item.image,
+              hasImage: !!item.image
+            });
+
+            return {
+              id: parseInt(item.id),
+              name: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              image: item.image || '/placeholder.jpg',
+              category: item.category || 'Electronics',
+              productId: item.id
+            };
+          });
+
+          console.log("Converted UI items:", uiItems);
           setCartItems(uiItems)
         } catch (error) {
           console.error('Failed to load cart:', error)
