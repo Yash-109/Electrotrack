@@ -446,7 +446,7 @@ export default function ShippingPage() {
               price: item.price,
               quantity: item.quantity,
               category: item.category,
-              image: "" // Add image if available
+              image: item.image || "" // Pass the actual product image
             })),
             shippingAddress: {
               fullName: shippingData.fullName,
