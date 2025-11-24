@@ -144,8 +144,8 @@ export class InvoiceGenerator {
         doc.text('Item', 22, yPosition + 2)
         doc.text('Category', 80, yPosition + 2)
         doc.text('Qty', 125, yPosition + 2, { align: 'center' })
-        doc.text('Price (₹)', 155, yPosition + 2, { align: 'right' })
-        doc.text('Total (₹)', 185, yPosition + 2, { align: 'right' })
+        doc.text('Price', 155, yPosition + 2, { align: 'right' })
+        doc.text('Total', 185, yPosition + 2, { align: 'right' })
 
         yPosition += 12
         doc.setTextColor(darkColor[0], darkColor[1], darkColor[2])
