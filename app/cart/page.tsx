@@ -292,7 +292,7 @@ export default function CartPage() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg">{item.name}</h3>
                       <p className="text-gray-600 capitalize">{item.category}</p>
-                      <p className="text-blue-600 font-bold text-lg">₹{item.price.toLocaleString()}</p>
+                      <p className="text-blue-600 font-bold text-lg">₹{item.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
                     </div>
 
                     <div className="flex items-center space-x-2">
@@ -333,7 +333,7 @@ export default function CartPage() {
                     </div>
 
                     <div className="text-right">
-                      <p className="font-bold text-lg">₹{(item.price * item.quantity).toLocaleString()}</p>
+                      <p className="font-bold text-lg">₹{(item.price * item.quantity).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -363,12 +363,12 @@ export default function CartPage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>₹{subtotal.toLocaleString()}</span>
+                  <span>₹{subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                 </div>
 
                 <div className="flex justify-between">
                   <span>GST (18%)</span>
-                  <span>₹{tax.toLocaleString()}</span>
+                  <span>₹{tax.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                 </div>
 
                 <div className="flex justify-between">
@@ -382,7 +382,7 @@ export default function CartPage() {
 
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>₹{total.toLocaleString()}</span>
+                  <span>₹{total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                 </div>
 
                 <div className="space-y-3 pt-4">
