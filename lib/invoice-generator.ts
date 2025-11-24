@@ -31,11 +31,11 @@ export interface InvoiceData {
 
 export class InvoiceGenerator {
     private static formatCurrency(amount: number): string {
-        if (!amount || isNaN(amount)) return '₹0.00'
+        if (!amount || isNaN(amount)) return '0.00'
 
         // Convert to number and ensure it's valid
         const num = parseFloat(amount.toString())
-        if (isNaN(num)) return '₹0.00'
+        if (isNaN(num)) return '0.00'
 
         // Format with 2 decimal places
         const formatted = num.toFixed(2)
@@ -44,7 +44,7 @@ export class InvoiceGenerator {
         const parts = formatted.split('.')
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-        return `₹${parts.join('.')}`
+        return parts.join('.')
     }
 
     private static formatDate(date: string | Date): string {
@@ -144,8 +144,8 @@ export class InvoiceGenerator {
         doc.text('Item', 22, yPosition + 2)
         doc.text('Category', 80, yPosition + 2)
         doc.text('Qty', 125, yPosition + 2, { align: 'center' })
-        doc.text('Price', 155, yPosition + 2, { align: 'right' })
-        doc.text('Total', 185, yPosition + 2, { align: 'right' })
+        doc.text('Price (₹)', 155, yPosition + 2, { align: 'right' })
+        doc.text('Total (₹)', 185, yPosition + 2, { align: 'right' })
 
         yPosition += 12
         doc.setTextColor(darkColor[0], darkColor[1], darkColor[2])

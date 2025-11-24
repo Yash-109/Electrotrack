@@ -42,11 +42,11 @@ export async function GET(request: NextRequest) {
 
 function generateInvoiceHTML(order: any, customerEmail: string): string {
     const formatCurrency = (amount: number) => {
-        if (!amount || isNaN(amount)) return '₹0.00'
+        if (!amount || isNaN(amount)) return '0.00'
 
         // Convert to number and ensure it's valid
         const num = parseFloat(amount.toString())
-        if (isNaN(num)) return '₹0.00'
+        if (isNaN(num)) return '0.00'
 
         // Format with 2 decimal places
         const formatted = num.toFixed(2)
@@ -55,10 +55,8 @@ function generateInvoiceHTML(order: any, customerEmail: string): string {
         // Add thousands separator manually
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-        return `₹${parts.join('.')}`
-    }
-
-    const formatDate = (date: string | Date) => new Date(date).toLocaleDateString('en-IN', {
+        return parts.join('.')
+    }    const formatDate = (date: string | Date) => new Date(date).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'long',
         year: 'numeric'
