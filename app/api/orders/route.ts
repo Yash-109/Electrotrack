@@ -208,3 +208,37 @@ function getStatusLocation(status: string): string {
       return 'Order Centre'
   }
 }
+
+// Delete order
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const orderId = searchParams.get('orderId')
+    const userEmail = searchParams.get('userEmail')
+
+    if (!orderId || !userEmail) {
+      return NextResponse.json({ error: 'Order ID and user email are required' }, { status: 400 })
+    }
+
+    const db = await getDb()
+    const orders = db.collection('orders')
+
+    // Verify order belongs to user before deleting
+    const order = await orders.findOne({ orderId, userEmail })
+    if (!order) {
+      return NextResponse.json({ error: 'Order not found or not authorized' }, { status: 404 })
+    }
+
+    // Delete the order
+    await orders.deleteOne({ orderId, userEmail })
+
+    return NextResponse.json({
+      success: true,
+      message: 'Order deleted successfully'
+    })
+
+  } catch (error) {
+    console.error('Delete order error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
