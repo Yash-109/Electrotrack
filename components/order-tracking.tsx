@@ -18,8 +18,8 @@ import {
     Calendar,
     Eye,
     Search,
+    Trash2,
     Filter,
-    Star,
     MessageSquare,
     Share2,
     Download,
@@ -43,6 +43,7 @@ interface OrderTrackingProps {
     const [filterStatus, setFilterStatus] = useState<string>("all")
     const [searchQuery, setSearchQuery] = useState("")
     const [showNotifications, setShowNotifications] = useState(false)
+    const [deletingOrder, setDeletingOrder] = useState<string | null>(null)
     const { toast } = useToast()
 
     // Filter and search orders
@@ -185,6 +186,55 @@ interface OrderTrackingProps {
             title: "Items Added",
             description: "Items from this order have been added to your cart.",
         })
+    }
+
+    const handleDeleteOrder = async (orderId: string) => {
+        if (!currentUserEmail) {
+            toast({
+                title: "Authentication required",
+                description: "Please log in to delete orders.",
+                variant: "destructive"
+            })
+            return
+        }
+
+        if (!confirm("Are you sure you want to delete this order? This action cannot be undone.")) {
+            return
+        }
+
+        setDeletingOrder(orderId)
+
+        try {
+            const response = await fetch(`/api/orders?orderId=${orderId}&userEmail=${currentUserEmail}`, {
+                method: 'DELETE'
+            })
+
+            const data = await response.json()
+
+            if (data.success) {
+                // Refresh the orders list
+                onRefresh()
+                toast({
+                    title: "Order deleted",
+                    description: "The order has been successfully deleted.",
+                })
+            } else {
+                toast({
+                    title: "Delete failed",
+                    description: data.error || "Failed to delete order. Please try again.",
+                    variant: "destructive"
+                })
+            }
+        } catch (error) {
+            console.error('Delete order error:', error)
+            toast({
+                title: "Delete failed",
+                description: "An error occurred while deleting the order.",
+                variant: "destructive"
+            })
+        } finally {
+            setDeletingOrder(null)
+        }
     }
 
     const handleDownloadInvoice = async (order: any) => {
@@ -363,13 +413,24 @@ interface OrderTrackingProps {
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                                             {order.items.slice(0, 3).map((item: any, index: number) => (
                                                 <div key={index} className="flex items-center space-x-3 p-2 bg-gray-50 rounded-md">
-                                                    {item.image && (
+                                                    <div className="relative">
                                                         <img
-                                                            src={item.image}
-                                                            alt={item.name}
-                                                            className="w-8 h-8 object-cover rounded"
+                                                            src={item.image && item.image !== "" ? item.image : "/placeholder.svg"}
+                                                            alt={item.name || "Product"}
+                                                            className="w-8 h-8 object-cover rounded bg-gray-100 border-2 border-blue-200"
+                                                            onError={(e) => {
+                                                                console.error(`Preview image failed for ${item.name}: ${item.image}`);
+                                                                e.currentTarget.src = "/placeholder.svg";
+                                                                e.currentTarget.style.border = "2px solid red";
+                                                            }}
+                                                            onLoad={() => {
+                                                                console.log(`Preview image loaded for ${item.name}: ${item.image}`);
+                                                            }}
                                                         />
-                                                    )}
+                                                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
+                                                            {index + 1}
+                                                        </div>
+                                                    </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium truncate">{item.name}</p>
                                                         <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
@@ -436,10 +497,21 @@ interface OrderTrackingProps {
                                             Invoice
                                         </Button>
 
-                                        <Button variant="outline" size="sm">
-                                            <Share2 className="h-4 w-4 mr-2" />
-                                            Share
-                                        </Button>
+                                        {order.status === "cancelled" && (
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() => handleDeleteOrder(order.orderId)}
+                                                disabled={deletingOrder === order.orderId}
+                                            >
+                                                {deletingOrder === order.orderId ? (
+                                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="h-4 w-4 mr-2" />
+                                                )}
+                                                Delete
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>
@@ -633,29 +705,51 @@ interface OrderTrackingProps {
                                 <Card>
                                     <CardHeader>
                                         <CardTitle>Order Items</CardTitle>
+                                        <p className="text-sm text-gray-500">Total items: {selectedOrder.items.length}</p>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {selectedOrder.items.map((item: any, index: number) => (
-                                                <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg">
-                                                    {item.image && (
-                                                        <img
-                                                            src={item.image}
-                                                            alt={item.name}
-                                                            className="w-16 h-16 object-cover rounded-md"
-                                                        />
-                                                    )}
-                                                    <div className="flex-1">
-                                                        <h4 className="font-medium">{item.name}</h4>
-                                                        <p className="text-sm text-gray-600">Category: {item.category}</p>
-                                                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                                            {selectedOrder.items.map((item: any, index: number) => {
+                                                console.log(`Rendering item ${index + 1}:`, item);
+                                                console.log(`Item image path:`, item.image);
+                                                return (
+                                                    <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg">
+                                                        <div className="relative">
+                                                            <img
+                                                                src={item.image && item.image !== "" ? item.image : "/placeholder.svg"}
+                                                                alt={item.name || "Product"}
+                                                                className="w-16 h-16 object-cover rounded-md bg-gray-100 border-2 border-blue-200"
+                                                                onError={(e) => {
+                                                                    console.error(`Image load failed for item ${index + 1} - ${item.name}:`, item.image);
+                                                                    e.currentTarget.src = "/placeholder.svg";
+                                                                    e.currentTarget.style.border = "2px solid red";
+                                                                }}
+                                                                onLoad={() => {
+                                                                    console.log(`Image loaded successfully for item ${index + 1} - ${item.name}:`, item.image);
+                                                                }}
+                                                            />
+                                                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
+                                                                {index + 1}
+                                                            </div>
+                                                            {(!item.image || item.image === "") && (
+                                                                <div className="absolute inset-0 flex items-center justify-center bg-red-200 rounded-md opacity-75">
+                                                                    <span className="text-xs text-red-800 font-bold">NO IMG</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-medium">{item.name}</h4>
+                                                            <p className="text-sm text-gray-600">Category: {item.category}</p>
+                                                            <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                                                            <p className="text-xs text-gray-400">Image: {item.image || "No image path"}</p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
+                                                            <p className="text-sm text-gray-500">{formatCurrency(item.price)} each</p>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
-                                                        <p className="text-sm text-gray-500">{formatCurrency(item.price)} each</p>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                )
+                                            })}
                                         </div>
                                     </CardContent>
                                 </Card>
