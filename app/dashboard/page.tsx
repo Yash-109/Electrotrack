@@ -1069,7 +1069,7 @@ export default function DashboardPage() {
                       className="text-lg sm:text-2xl font-bold text-blue-600"
                       aria-label={`Current price ${product.price.toLocaleString()} rupees`}
                     >
-                      ₹{product.price.toLocaleString()}
+                      ₹{product.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                     </span>
                     {product.originalPrice > product.price && (
                       <span
@@ -1240,10 +1240,10 @@ export default function DashboardPage() {
                   {/* Price and Rating */}
                   <div>
                     <div className="flex items-center gap-4 mb-3">
-                      <span className="text-3xl font-bold text-blue-600">₹{quickViewProduct.price.toLocaleString()}</span>
+                      <span className="text-3xl font-bold text-blue-600">₹{quickViewProduct.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
                       {quickViewProduct.originalPrice > quickViewProduct.price && (
                         <span className="text-lg text-gray-500 line-through">
-                          ₹{quickViewProduct.originalPrice.toLocaleString()}
+                          ₹{quickViewProduct.originalPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                         </span>
                       )}
                     </div>
@@ -1359,14 +1359,14 @@ export default function DashboardPage() {
                     return (
                       <td key={`${product.id}-price`} className="p-4 text-center">
                         <div className="space-y-2">
-                          <div className="text-2xl font-bold text-green-600">₹{product.price.toLocaleString()}</div>
+                          <div className="text-2xl font-bold text-green-600">₹{product.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</div>
                           {product.originalPrice > product.price && (
                             <div className="space-y-1">
                               <div className="text-sm text-gray-500 line-through">
-                                ₹{product.originalPrice.toLocaleString()}
+                                ₹{product.originalPrice.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                               </div>
                               <Badge className="bg-red-500 text-xs">
-                                Save ₹{savings.toLocaleString()} ({discount}% OFF)
+                                Save ₹{savings.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ({discount}% OFF)
                               </Badge>
                             </div>
                           )}
@@ -1563,8 +1563,8 @@ export default function DashboardPage() {
               <div key={product.id} className="flex-1">
                 <Button
                   className={`w-full h-12 text-sm font-medium ${index === 0 ? 'bg-green-600 hover:bg-green-700' :
-                      index === 1 ? 'bg-blue-600 hover:bg-blue-700' :
-                        'bg-purple-600 hover:bg-purple-700'
+                    index === 1 ? 'bg-blue-600 hover:bg-blue-700' :
+                      'bg-purple-600 hover:bg-purple-700'
                     }`}
                   onClick={() => {
                     addToCart(product)

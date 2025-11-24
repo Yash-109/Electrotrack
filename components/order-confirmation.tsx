@@ -105,7 +105,7 @@ export function OrderConfirmation({
                         </div>
                         <div>
                             <span className="font-medium text-gray-500">Total Amount:</span>
-                            <p className="font-semibold">₹{total.toLocaleString()}</p>
+                            <p className="font-semibold">₹{total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
                         </div>
                     </div>
                 </CardContent>
@@ -127,8 +127,8 @@ export function OrderConfirmation({
                                         <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-medium">₹{(item.price * item.quantity).toLocaleString()}</p>
-                                        <p className="text-sm text-gray-500">₹{item.price.toLocaleString()} each</p>
+                                        <p className="font-medium">₹{(item.price * item.quantity).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
+                                        <p className="text-sm text-gray-500">₹{item.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} each</p>
                                     </div>
                                 </div>
                                 {index < items.length - 1 && <Separator className="mt-4" />}
@@ -171,7 +171,7 @@ export function OrderConfirmation({
                         </p>
                         {paymentMethod === "cod" && (
                             <p className="text-amber-600 mt-2">
-                                💰 Please keep ₹{total.toLocaleString()} ready for payment upon delivery.
+                                💰 Please keep ₹{total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')} ready for payment upon delivery.
                             </p>
                         )}
                     </div>

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ShoppingCart, User, LogOut, Package, Settings, Menu, X, UserCircle } from "lucide-react"
+import { ShoppingCart, User, LogOut, Package, Settings, Menu, X, UserCircle, Truck } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { log } from "@/lib/logger"
@@ -117,6 +117,12 @@ export function Header() {
               Products
             </Link>
             <Link
+              href="/order-tracking"
+              className="text-gray-700 hover:text-blue-600 font-medium border-b-2 border-transparent hover:border-blue-600 pb-1"
+            >
+              Track Order
+            </Link>
+            <Link
               href="/about"
               className="text-gray-700 hover:text-blue-600 font-medium border-b-2 border-transparent hover:border-blue-600 pb-1"
             >
@@ -176,9 +182,15 @@ export function Header() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/order-tracking" className="flex items-center">
+                      <Truck className="mr-2 h-4 w-4" />
+                      <span>Track Orders</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/profile" className="flex items-center">
                       <Package className="mr-2 h-4 w-4" />
-                      <span>My Profile</span>
+                      <span>Order History</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
@@ -223,6 +235,9 @@ export function Header() {
               <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 font-medium">
                 Products
               </Link>
+              <Link href="/order-tracking" className="text-gray-700 hover:text-blue-600 font-medium">
+                Track Order
+              </Link>
               <Link href="/about" className="text-gray-700 hover:text-blue-600 font-medium">
                 About
               </Link>
@@ -255,9 +270,13 @@ export function Header() {
                     <UserCircle className="h-4 w-4" />
                     <span>Profile</span>
                   </Link>
+                  <Link href="/order-tracking" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 py-2">
+                    <Truck className="h-4 w-4" />
+                    <span>Track Orders</span>
+                  </Link>
                   <Link href="/profile" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600 py-2">
                     <Package className="h-4 w-4" />
-                    <span>My Profile</span>
+                    <span>Order History</span>
                   </Link>
                   <button
                     onClick={handleLogout}

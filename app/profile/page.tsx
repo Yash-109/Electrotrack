@@ -15,6 +15,7 @@ import { userAuth } from "@/lib/user-auth"
 import { useToast } from "@/hooks/use-toast"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
+import { OrderTracking } from "@/components/order-tracking"
 
 export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -42,7 +43,7 @@ export default function ProfilePage() {
     try {
       const response = await fetch(`/api/user/profile?userId=${encodeURIComponent(userEmail)}`)
       const data = await response.json()
-      
+
       if (data.success) {
         setAddresses(data.user.shippingAddresses || [])
         return data.user
@@ -56,9 +57,9 @@ export default function ProfilePage() {
   // Fetch user orders from API
   const fetchUserOrders = async (userEmail: string) => {
     try {
-      const response = await fetch(`/api/user/orders?userId=${encodeURIComponent(userEmail)}`)
+      const response = await fetch(`/api/orders?userEmail=${encodeURIComponent(userEmail)}`)
       const data = await response.json()
-      
+
       if (data.success) {
         setOrders(data.orders || [])
       }
@@ -77,7 +78,7 @@ export default function ProfilePage() {
       const user = userAuth.getCurrentUser()
       setCurrentUser(user)
       setEditedUser(user)
-      
+
       if (user && user.email) {
         // Fetch profile and orders from API
         const profileData = await fetchUserProfile(user.email)
@@ -86,10 +87,10 @@ export default function ProfilePage() {
           setCurrentUser(updatedUser)
           setEditedUser(updatedUser)
         }
-        
+
         await fetchUserOrders(user.email)
       }
-      
+
       setLoading(false)
     }
 
@@ -115,7 +116,7 @@ export default function ProfilePage() {
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
         // Update localStorage as well
         const users = JSON.parse(localStorage.getItem("users") || "[]")
@@ -166,7 +167,7 @@ export default function ProfilePage() {
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
         setAddresses([...addresses, data.address])
         setNewAddress({
@@ -212,7 +213,7 @@ export default function ProfilePage() {
       })
 
       const data = await response.json()
-      
+
       if (data.success) {
         setAddresses(addresses.filter(addr => addr.id !== addressId))
 
@@ -397,45 +398,15 @@ export default function ProfilePage() {
             <TabsContent value="orders">
               <Card>
                 <CardHeader>
-                  <CardTitle>Order History</CardTitle>
-                  <CardDescription>View your past orders and their current status.</CardDescription>
+                  <CardTitle>Order History & Tracking</CardTitle>
+                  <CardDescription>Track your orders and view detailed order information.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {orders.length > 0 ? (
-                      orders.map((order) => (
-                        <div key={order._id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-4">
-                              <Package className="h-5 w-5 text-gray-500" />
-                              <div>
-                                <p className="font-medium">{order.orderId}</p>
-                                <p className="text-sm text-gray-500">
-                                  {new Date(order.createdAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                            <Badge className={getStatusColor(order.status)}>{order.status}</Badge>
-                          </div>
-                          <div className="ml-9">
-                            <p className="text-sm text-gray-600 mb-1">
-                              Items: {order.items.map((item: any) => item.name).join(", ")}
-                            </p>
-                            <p className="font-medium">₹{order.total.toLocaleString()}</p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-500">No orders found</p>
-                        <p className="text-sm text-gray-400 mb-4">Your order history will appear here once you make a purchase</p>
-                        <Button onClick={() => router.push('/dashboard')}>
-                          Start Shopping
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+                  <OrderTracking
+                    orders={orders}
+                    onRefresh={() => fetchUserOrders(currentUser.email)}
+                    currentUserEmail={currentUser.email}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -465,7 +436,7 @@ export default function ProfilePage() {
                           <Input
                             id="fullName"
                             value={newAddress.fullName}
-                            onChange={(e) => setNewAddress({...newAddress, fullName: e.target.value})}
+                            onChange={(e) => setNewAddress({ ...newAddress, fullName: e.target.value })}
                             placeholder="Enter full name"
                           />
                         </div>
@@ -474,7 +445,7 @@ export default function ProfilePage() {
                           <Input
                             id="phone"
                             value={newAddress.phone}
-                            onChange={(e) => setNewAddress({...newAddress, phone: e.target.value})}
+                            onChange={(e) => setNewAddress({ ...newAddress, phone: e.target.value })}
                             placeholder="Enter phone number"
                           />
                         </div>
@@ -483,7 +454,7 @@ export default function ProfilePage() {
                           <Input
                             id="address"
                             value={newAddress.address}
-                            onChange={(e) => setNewAddress({...newAddress, address: e.target.value})}
+                            onChange={(e) => setNewAddress({ ...newAddress, address: e.target.value })}
                             placeholder="Enter full address"
                           />
                         </div>
@@ -492,7 +463,7 @@ export default function ProfilePage() {
                           <Input
                             id="city"
                             value={newAddress.city}
-                            onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
+                            onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
                             placeholder="Enter city"
                           />
                         </div>
@@ -501,7 +472,7 @@ export default function ProfilePage() {
                           <Input
                             id="state"
                             value={newAddress.state}
-                            onChange={(e) => setNewAddress({...newAddress, state: e.target.value})}
+                            onChange={(e) => setNewAddress({ ...newAddress, state: e.target.value })}
                             placeholder="Enter state"
                           />
                         </div>
@@ -510,7 +481,7 @@ export default function ProfilePage() {
                           <Input
                             id="pincode"
                             value={newAddress.pincode}
-                            onChange={(e) => setNewAddress({...newAddress, pincode: e.target.value})}
+                            onChange={(e) => setNewAddress({ ...newAddress, pincode: e.target.value })}
                             placeholder="Enter pincode"
                           />
                         </div>
@@ -520,7 +491,7 @@ export default function ProfilePage() {
                             id="type"
                             className="w-full p-2 border rounded"
                             value={newAddress.type}
-                            onChange={(e) => setNewAddress({...newAddress, type: e.target.value})}
+                            onChange={(e) => setNewAddress({ ...newAddress, type: e.target.value })}
                           >
                             <option value="Home">Home</option>
                             <option value="Office">Office</option>
@@ -533,7 +504,7 @@ export default function ProfilePage() {
                           type="checkbox"
                           id="isDefault"
                           checked={newAddress.isDefault}
-                          onChange={(e) => setNewAddress({...newAddress, isDefault: e.target.checked})}
+                          onChange={(e) => setNewAddress({ ...newAddress, isDefault: e.target.checked })}
                         />
                         <Label htmlFor="isDefault">Set as default address</Label>
                       </div>
@@ -543,7 +514,7 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="space-y-4">
                     {addresses.length > 0 ? (
                       addresses.map((address) => (
@@ -564,8 +535,8 @@ export default function ProfilePage() {
                               <p className="text-sm text-gray-600">{address.phone}</p>
                             </div>
                             <div className="flex space-x-2">
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleDeleteAddress(address.id)}
                               >
