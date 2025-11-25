@@ -24,11 +24,11 @@ import {
     Share2,
     Download,
     RefreshCw,
-    Bell,
     Home,
     Building,
     Phone,
-    Mail
+    Mail,
+    Star
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { InvoiceGenerator, orderToInvoiceData } from "@/lib/invoice-generator"
@@ -42,7 +42,6 @@ interface OrderTrackingProps {
     const [trackingDialogOpen, setTrackingDialogOpen] = useState(false)
     const [filterStatus, setFilterStatus] = useState<string>("all")
     const [searchQuery, setSearchQuery] = useState("")
-    const [showNotifications, setShowNotifications] = useState(false)
     const [deletingOrder, setDeletingOrder] = useState<string | null>(null)
     const { toast } = useToast()
 
@@ -354,14 +353,6 @@ interface OrderTrackingProps {
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
                     </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowNotifications(!showNotifications)}
-                    >
-                        <Bell className="h-4 w-4 mr-2" />
-                        Notifications
-                    </Button>
                 </div>
             </div>
 
@@ -427,9 +418,6 @@ interface OrderTrackingProps {
                                                                 console.log(`Preview image loaded for ${item.name}: ${item.image}`);
                                                             }}
                                                         />
-                                                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
-                                                            {index + 1}
-                                                        </div>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium truncate">{item.name}</p>
@@ -728,9 +716,6 @@ interface OrderTrackingProps {
                                                                     console.log(`Image loaded successfully for item ${index + 1} - ${item.name}:`, item.image);
                                                                 }}
                                                             />
-                                                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full text-xs flex items-center justify-center text-white font-bold">
-                                                                {index + 1}
-                                                            </div>
                                                             {(!item.image || item.image === "") && (
                                                                 <div className="absolute inset-0 flex items-center justify-center bg-red-200 rounded-md opacity-75">
                                                                     <span className="text-xs text-red-800 font-bold">NO IMG</span>
