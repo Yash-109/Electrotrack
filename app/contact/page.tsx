@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Phone, Mail, Clock, MapPin, MessageSquare, Facebook, Instagram, Twitter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { StaticMapFallback } from "@/components/google-maps"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -102,21 +101,6 @@ export default function ContactPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Store Address */}
-                <div>
-                  <div className="flex items-center mb-3">
-                    <MapPin className="h-5 w-5 text-blue-600 mr-2" />
-                    <h3 className="font-semibold">Store Address</h3>
-                  </div>
-                  <p className="text-gray-600 ml-7">
-                    18-gala minibazar, matavadi circle
-                    <br />
-                    Surat, Gujarat 394107
-                    <br />
-                    India
-                  </p>
-                </div>
-
                 {/* Phone Number */}
                 <div>
                   <div className="flex items-center mb-3">
@@ -323,52 +307,42 @@ export default function ContactPage() {
                 <p className="text-gray-600">Visit our showroom to see our complete range of electronics</p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Store Info */}
-                  <div className="bg-blue-50 rounded-xl p-6 text-center">
-                    <div className="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <MapPin className="h-8 w-8 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Radhika Electronics</h3>
-                    <p className="text-gray-600 mb-4">18-gala minibazar, matavadi circle, Surat, Gujarat 394107</p>
-
-                    <div className="space-y-2 mb-4">
-                      <button
-                        onClick={() =>
-                          window.open(
-                            "https://www.google.com/maps/dir/?api=1&destination=18-gala+minibazar+matavadi+circle+Surat+Gujarat+394107",
-                            "_blank",
-                          )
-                        }
-                        className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
-                      >
-                        <MapPin className="h-4 w-4 mr-2" />
-                        Get Directions
-                      </button>
-
-                      <button
-                        onClick={() =>
-                          window.open(
-                            "https://www.google.com/maps/place/18-gala+minibazar+matavadi+circle+Surat+Gujarat+394107",
-                            "_blank",
-                          )
-                        }
-                        className="w-full bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center"
-                      >
-                        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                        </svg>
-                        View on Maps
-                      </button>
-                    </div>
+                {/* Store Info */}
+                <div className="bg-blue-50 rounded-xl p-6 text-center mb-6">
+                  <div className="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MapPin className="h-8 w-8 text-white" />
                   </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Radhika Electronics</h3>
+                  <p className="text-gray-600 mb-4">18-gala minibazar, matavadi circle, Surat, Gujarat 394107</p>
 
-                  {/* Google Maps Embed */}
-                  <div className="rounded-xl overflow-hidden">
-                    <StaticMapFallback
-                      address="18-gala minibazar, matavadi circle, Surat, Gujarat 394107, India"
-                      height="300px"
-                    />
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center max-w-md mx-auto">
+                    <button
+                      onClick={() =>
+                        window.open(
+                          "https://www.google.com/maps/dir/?api=1&destination=18-gala+minibazar+matavadi+circle+Surat+Gujarat+394107",
+                          "_blank",
+                        )
+                      }
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Get Directions
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        window.open(
+                          "https://www.google.com/maps/place/18-gala+minibazar+matavadi+circle+Surat+Gujarat+394107",
+                          "_blank",
+                        )
+                      }
+                      className="bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center"
+                    >
+                      <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </svg>
+                      View on Maps
+                    </button>
                   </div>
                 </div>
               </CardContent>
