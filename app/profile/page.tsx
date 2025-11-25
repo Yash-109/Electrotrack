@@ -233,19 +233,6 @@ export default function ProfilePage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Delivered":
-        return "bg-green-100 text-green-800"
-      case "Shipped":
-        return "bg-blue-100 text-blue-800"
-      case "Processing":
-        return "bg-yellow-100 text-yellow-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -303,11 +290,10 @@ export default function ProfilePage() {
 
           {/* Profile Tabs */}
           <Tabs defaultValue="personal" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="orders">Order History</TabsTrigger>
               <TabsTrigger value="addresses">Addresses</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
             {/* Personal Information Tab */}
@@ -556,67 +542,6 @@ export default function ProfilePage() {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            {/* Settings Tab */}
-            <TabsContent value="settings">
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Account Settings</CardTitle>
-                    <CardDescription>Manage your account preferences and security settings.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Email Notifications</p>
-                        <p className="text-sm text-gray-500">Receive updates about your orders</p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Configure
-                      </Button>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Password</p>
-                        <p className="text-sm text-gray-500">Change your account password</p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Change Password
-                      </Button>
-                    </div>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Two-Factor Authentication</p>
-                        <p className="text-sm text-gray-500">Add an extra layer of security</p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Enable 2FA
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-red-200">
-                  <CardHeader>
-                    <CardTitle className="text-red-600">Danger Zone</CardTitle>
-                    <CardDescription>Irreversible and destructive actions.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-red-600">Delete Account</p>
-                        <p className="text-sm text-gray-500">Permanently delete your account and all data</p>
-                      </div>
-                      <Button variant="destructive" size="sm">
-                        Delete Account
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
             </TabsContent>
           </Tabs>
         </div>
