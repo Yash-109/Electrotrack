@@ -4,7 +4,6 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { Phone, Mail, MapPin, Users, Award, Star, CheckCircle } from "lucide-react"
-import { StaticMapFallback } from "@/components/google-maps"
 import { Clock } from "lucide-react"
 
 export default function AboutPage() {
@@ -205,7 +204,7 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold mb-4 text-gray-800 text-center">Find Our Store</h2>
           <p className="text-gray-600 mb-8 text-center">Visit our showroom to see our complete range of electronics</p>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="max-w-2xl mx-auto">
             {/* Store Information */}
             <div className="bg-white rounded-xl p-6">
               <div className="bg-blue-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -241,7 +240,7 @@ export default function AboutPage() {
                 </div>
               </div>
 
-              <div className="mt-6 space-y-3">
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() =>
                     window.open(
@@ -249,7 +248,7 @@ export default function AboutPage() {
                       "_blank",
                     )
                   }
-                  className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
                 >
                   <MapPin className="h-4 w-4 mr-2" />
                   Get Directions
@@ -262,7 +261,7 @@ export default function AboutPage() {
                       "_blank",
                     )
                   }
-                  className="w-full bg-white border-2 border-blue-600 text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center"
+                  className="flex-1 bg-white border-2 border-blue-600 text-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center"
                 >
                   <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
@@ -270,14 +269,6 @@ export default function AboutPage() {
                   View on Google Maps
                 </button>
               </div>
-            </div>
-
-            {/* Google Maps */}
-            <div className="bg-white rounded-xl p-2">
-              <StaticMapFallback
-                address="18-gala minibazar, matavadi circle, Surat, Gujarat 394107, India"
-                className="h-full min-h-[400px]"
-              />
             </div>
           </div>
         </section>
