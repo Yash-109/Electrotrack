@@ -43,6 +43,8 @@ interface OrderTrackingProps {
     const [filterStatus, setFilterStatus] = useState<string>("all")
     const [searchQuery, setSearchQuery] = useState("")
     const [deletingOrder, setDeletingOrder] = useState<string | null>(null)
+    const [cancelingOrder, setCancelingOrder] = useState<string | null>(null)
+    const [reorderingOrder, setReorderingOrder] = useState<string | null>(null)
     const { toast } = useToast()
 
     // Filter and search orders
@@ -149,6 +151,7 @@ interface OrderTrackingProps {
     }
 
     const handleCancelOrder = async (orderId: string) => {
+        setCancelingOrder(orderId)
         try {
             const response = await fetch('/api/orders', {
                 method: 'PUT',
@@ -176,6 +179,8 @@ interface OrderTrackingProps {
                 description: "Failed to cancel order. Please try again.",
                 variant: "destructive",
             })
+        } finally {
+            setCancelingOrder(null)
         }
     }
 
@@ -451,8 +456,12 @@ interface OrderTrackingProps {
                                                 variant="destructive"
                                                 size="sm"
                                                 onClick={() => handleCancelOrder(order.orderId)}
+                                                disabled={cancelingOrder === order.orderId}
                                             >
-                                                Cancel Order
+                                                {cancelingOrder === order.orderId ? (
+                                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                                ) : null}
+                                                {cancelingOrder === order.orderId ? "Canceling..." : "Cancel Order"}
                                             </Button>
                                         )}
 
