@@ -29,12 +29,18 @@ export class CartService {
     }
 
     return items.reduce((total, item) => {
-      // Safety check for item properties
-      const price = typeof item?.price === 'number' && item.price > 0 ? item.price : 0
-      const quantity = typeof item?.quantity === 'number' && item.quantity > 0 ? item.quantity : 0
-      // Skip items with zero quantity to avoid affecting totals
-      if (quantity === 0 || price === 0) return total
-      return total + (price * quantity)
+      // Validate item data before calculation
+      if (!item || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
+        log.warn('Invalid cart item data detected', { item }, 'CartService')
+        return total
+      }
+
+      // Ensure non-negative values and skip zero quantities
+      const validPrice = Math.max(0, item.price)
+      const validQuantity = Math.max(0, Math.floor(item.quantity))
+
+      if (validQuantity === 0 || validPrice === 0) return total
+      return total + (validPrice * validQuantity)
     }, 0)
   }
 
