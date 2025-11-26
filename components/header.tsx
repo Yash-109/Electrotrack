@@ -32,8 +32,6 @@ export function Header() {
     if (isLoadingCart) return // Prevent multiple simultaneous requests
 
     setIsLoadingCart(true)
-
-    setIsLoadingCart(true)
     try {
       const cartItems = await CartService.getCart(userEmail)
 
