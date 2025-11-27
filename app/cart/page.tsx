@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
@@ -10,10 +10,19 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Minus, Plus, Trash2, ShoppingBag, AlertCircle } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, AlertCircle, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
 import { CartService, type CartItem as ServiceCartItem } from "@/lib/cart-service"
+
+// Utility function for debouncing rapid updates
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout
+  return ((...args: any[]) => {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }) as T
+}
 
 interface CartItem {
   id: number
@@ -32,8 +41,79 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set())
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
+  const [retryAttempts, setRetryAttempts] = useState<Map<number, number>>(new Map())
+  const [isRetrying, setIsRetrying] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
+
+  // Debounced update function to prevent rapid API calls
+  const debouncedUpdate = useCallback(
+    debounce(async (userEmail: string, items: ServiceCartItem[]) => {
+      try {
+        await CartService.saveCart(userEmail, items)
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
+        // Reset retry attempts on successful update
+        setRetryAttempts(new Map())
+      } catch (error) {
+        console.error('Debounced cart update failed:', error)
+        throw error
+      }
+    }, 1000),
+    []
+  )
+
+  // Memoized cart totals for performance
+  const cartTotals = useMemo(() => {
+    const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const tax = subtotal * 0.18 // 18% GST
+    const shipping = subtotal > 5000 ? 0 : 50 // Free shipping above ₹5000
+    const total = subtotal + tax + shipping
+
+    return { subtotal, tax, shipping, total }
+  }, [cartItems])
+
+  // Retry mechanism for failed cart operations
+  const retryCartOperation = useCallback(async (
+    operation: () => Promise<void>,
+    itemId: number,
+    maxRetries: number = 3
+  ) => {
+    const currentAttempts = retryAttempts.get(itemId) || 0
+
+    if (currentAttempts >= maxRetries) {
+      toast({
+        title: "Operation failed",
+        description: "Unable to complete operation after multiple attempts. Please refresh and try again.",
+        variant: "destructive"
+      })
+      return false
+    }
+
+    try {
+      await operation()
+      setRetryAttempts(prev => {
+        const newMap = new Map(prev)
+        newMap.delete(itemId)
+        return newMap
+      })
+      return true
+    } catch (error) {
+      setRetryAttempts(prev => {
+        const newMap = new Map(prev)
+        newMap.set(itemId, currentAttempts + 1)
+        return newMap
+      })
+
+      if (currentAttempts < maxRetries - 1) {
+        setIsRetrying(true)
+        setTimeout(() => {
+          setIsRetrying(false)
+          retryCartOperation(operation, itemId, maxRetries)
+        }, 1000 * Math.pow(2, currentAttempts)) // Exponential backoff
+      }
+      return false
+    }
+  }, [retryAttempts, toast])
 
   useEffect(() => {
     const initializeCart = async () => {
@@ -96,6 +176,9 @@ export default function CartPage() {
       })
       return
     }
+
+    // Prevent multiple simultaneous updates
+    if (updatingItems.has(id)) return
 
     // Add loading state for this specific item
     setUpdatingItems(prev => new Set(prev).add(id))
@@ -203,11 +286,6 @@ export default function CartPage() {
     }
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const tax = subtotal * 0.18 // 18% GST
-  const shipping = subtotal > 50000 ? 0 : 500 // Free shipping above ₹50,000
-  const total = subtotal + tax + shipping
-
   const handleCheckout = () => {
     if (!isLoggedIn) {
       toast({
@@ -219,15 +297,12 @@ export default function CartPage() {
       return
     }
 
-    // Store cart data for checkout
+    // Store cart data for checkout using memoized totals
     localStorage.setItem(
       "radhika_checkout_cart",
       JSON.stringify({
         items: cartItems,
-        subtotal,
-        tax,
-        shipping,
-        total,
+        ...cartTotals,
       }),
     )
 
@@ -378,26 +453,26 @@ export default function CartPage() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between">
                   <span>Subtotal</span>
-                  <span>₹{subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
+                  <span>₹{cartTotals.subtotal.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')}</span>
                 </div>
 
                 <div className="flex justify-between">
                   <span>GST (18%)</span>
-                  <span>₹{tax.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
+                  <span>₹{cartTotals.tax.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')}</span>
                 </div>
 
                 <div className="flex justify-between">
                   <span>Shipping</span>
-                  <span>{shipping === 0 ? "Free" : `₹${shipping}`}</span>
+                  <span>{cartTotals.shipping === 0 ? "Free" : `₹${cartTotals.shipping}`}</span>
                 </div>
 
-                {shipping === 0 && <p className="text-sm text-green-600">🎉 You got free shipping!</p>}
+                {cartTotals.shipping === 0 && <p className="text-sm text-green-600">🎉 You got free shipping!</p>}
 
                 <Separator />
 
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
-                  <span>₹{total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
+                  <span>₹{cartTotals.total.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')}</span>
                 </div>
 
                 <div className="space-y-3 pt-4">
