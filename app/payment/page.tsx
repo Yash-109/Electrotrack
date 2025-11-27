@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
@@ -18,12 +18,75 @@ import {
   Shield,
   AlertCircle,
   QrCode,
-  Banknote
+  Banknote,
+  RefreshCw,
+  CheckCircle,
+  XCircle
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
 import { useAdminIntegration } from "@/hooks/use-admin-integration"
 import { log } from "@/lib/logger"
+
+interface PaymentState {
+  paymentMethod: string
+  isProcessing: boolean
+  showOrderSummary: boolean
+  showUpiDialog: boolean
+  orderData: any
+  error: string | null
+  retryCount: number
+  processingTimeout: NodeJS.Timeout | null
+  verificationInterval: NodeJS.Timeout | null
+}
+
+interface PaymentError {
+  code: string
+  message: string
+  recoverable: boolean
+}
+
+const PAYMENT_ERRORS = {
+  NETWORK_ERROR: {
+    code: 'NETWORK_ERROR',
+    message: 'Network error. Please check your connection and try again.',
+    recoverable: true
+  },
+  PAYMENT_FAILED: {
+    code: 'PAYMENT_FAILED',
+    message: 'Payment failed. Please try again with a different method.',
+    recoverable: true
+  },
+  INSUFFICIENT_FUNDS: {
+    code: 'INSUFFICIENT_FUNDS',
+    message: 'Insufficient funds. Please check your balance or use a different payment method.',
+    recoverable: true
+  },
+  INVALID_CARD: {
+    code: 'INVALID_CARD',
+    message: 'Invalid card details. Please check and try again.',
+    recoverable: true
+  },
+  SERVER_ERROR: {
+    code: 'SERVER_ERROR',
+    message: 'Server error. Please try again later.',
+    recoverable: true
+  },
+  TIMEOUT_ERROR: {
+    code: 'TIMEOUT_ERROR',
+    message: 'Payment timeout. Please try again.',
+    recoverable: true
+  },
+  UNKNOWN_ERROR: {
+    code: 'UNKNOWN_ERROR',
+    message: 'An unexpected error occurred. Please try again.',
+    recoverable: true
+  }
+} as const
+
+const MAX_RETRY_ATTEMPTS = 3
+const RETRY_DELAYS = [1000, 3000, 5000] // Progressive delays
+const PAYMENT_TIMEOUT = 30000 // 30 seconds
 
 interface CartItem {
   id: number
@@ -50,22 +113,146 @@ declare global {
 
 export default function PaymentPage() {
   const [checkoutData, setCheckoutData] = useState<CheckoutData | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState("cards")
-  const [isProcessing, setIsProcessing] = useState(false)
+  const [paymentState, setPaymentState] = useState<PaymentState>({
+    paymentMethod: "cards",
+    isProcessing: false,
+    showOrderSummary: false,
+    showUpiDialog: false,
+    orderData: null,
+    error: null,
+    retryCount: 0,
+    processingTimeout: null,
+    verificationInterval: null
+  })
   const [currentUser, setCurrentUser] = useState<any>(null)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [razorpayLoaded, setRazorpayLoaded] = useState(false)
   const [showUPIScanner, setShowUPIScanner] = useState(false)
-  const [upiProcessing, setUpiProcessing] = useState(false)
   const [showNetbankingInterface, setShowNetbankingInterface] = useState(false)
   const [showCardInterface, setShowCardInterface] = useState(false)
   const [showWalletInterface, setShowWalletInterface] = useState(false)
-  const [netbankingProcessing, setNetbankingProcessing] = useState(false)
-  const [cardProcessing, setCardProcessing] = useState(false)
-  const [walletProcessing, setWalletProcessing] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
   const { addOnlineSale } = useAdminIntegration()
+
+  // Cleanup function
+  useEffect(() => {
+    return () => {
+      if (paymentState.processingTimeout) {
+        clearTimeout(paymentState.processingTimeout)
+      }
+      if (paymentState.verificationInterval) {
+        clearInterval(paymentState.verificationInterval)
+      }
+    }
+  }, [paymentState.processingTimeout, paymentState.verificationInterval])
+
+  // Error handling utility
+  const parsePaymentError = useCallback((error: any): PaymentError => {
+    if (!error) return PAYMENT_ERRORS.UNKNOWN_ERROR
+
+    // Network errors
+    if (error.name === 'TypeError' || error.message?.includes('fetch')) {
+      return PAYMENT_ERRORS.NETWORK_ERROR
+    }
+
+    // Razorpay specific errors
+    if (error.code) {
+      switch (error.code) {
+        case 'PAYMENT_FAILED':
+          return PAYMENT_ERRORS.PAYMENT_FAILED
+        case 'INSUFFICIENT_FUNDS':
+          return PAYMENT_ERRORS.INSUFFICIENT_FUNDS
+        case 'INVALID_CARD':
+          return PAYMENT_ERRORS.INVALID_CARD
+        default:
+          return PAYMENT_ERRORS.PAYMENT_FAILED
+      }
+    }
+
+    // Timeout errors
+    if (error.message?.includes('timeout')) {
+      return PAYMENT_ERRORS.TIMEOUT_ERROR
+    }
+
+    // Server errors
+    if (error.status >= 500) {
+      return PAYMENT_ERRORS.SERVER_ERROR
+    }
+
+    return PAYMENT_ERRORS.UNKNOWN_ERROR
+  }, [])
+
+  // Retry mechanism with exponential backoff
+  const retryPaymentOperation = useCallback(async (
+    operation: () => Promise<any>,
+    context: string
+  ): Promise<any> => {
+    let lastError: any
+
+    for (let attempt = 0; attempt < MAX_RETRY_ATTEMPTS; attempt++) {
+      try {
+        log.info(`Attempting payment operation: ${context}, attempt ${attempt + 1}`)
+        const result = await operation()
+
+        if (attempt > 0) {
+          log.info(`Payment operation succeeded after ${attempt + 1} attempts: ${context}`)
+        }
+
+        return result
+      } catch (error) {
+        lastError = error
+        const paymentError = parsePaymentError(error)
+
+        log.error(`Payment operation failed on attempt ${attempt + 1}: ${context}`, error)
+
+        if (!paymentError.recoverable || attempt === MAX_RETRY_ATTEMPTS - 1) {
+          throw error
+        }
+
+        // Wait before retry with progressive delay
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[attempt]))
+
+        setPaymentState(prev => ({
+          ...prev,
+          retryCount: attempt + 1,
+          error: `Retrying... (${attempt + 1}/${MAX_RETRY_ATTEMPTS})`
+        }))
+      }
+    }
+
+    throw lastError
+  }, [parsePaymentError])
+
+  // Payment timeout handler
+  const setupPaymentTimeout = useCallback((onTimeout: () => void) => {
+    const timeout = setTimeout(() => {
+      log.warn('Payment operation timed out')
+      onTimeout()
+    }, PAYMENT_TIMEOUT)
+
+    setPaymentState(prev => ({
+      ...prev,
+      processingTimeout: timeout
+    }))
+
+    return timeout
+  }, [])
+
+  // Clear timeouts
+  const clearPaymentTimeouts = useCallback(() => {
+    if (paymentState.processingTimeout) {
+      clearTimeout(paymentState.processingTimeout)
+    }
+    if (paymentState.verificationInterval) {
+      clearInterval(paymentState.verificationInterval)
+    }
+    setPaymentState(prev => ({
+      ...prev,
+      processingTimeout: null,
+      verificationInterval: null
+    }))
+  }, [paymentState.processingTimeout, paymentState.verificationInterval])
 
   useEffect(() => {
     // Load Razorpay script
@@ -748,21 +935,47 @@ export default function PaymentPage() {
     }
   }
 
-  const handlePayment = async () => {
-    if (paymentMethod === 'cod') {
+  const handlePayment = useCallback(async () => {
+    if (!checkoutData) {
+      toast({
+        title: "No checkout data",
+        description: "Please try again from your cart.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!razorpayLoaded && paymentState.paymentMethod !== 'cod') {
+      toast({
+        title: "Payment system not ready",
+        description: "Please wait for the payment system to load.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (paymentState.paymentMethod === 'cod') {
       await processCODOrder()
-    } else if (paymentMethod === 'upi') {
+    } else if (paymentState.paymentMethod === 'upi') {
       setShowUPIScanner(true)
-    } else if (paymentMethod === 'netbanking') {
+    } else if (paymentState.paymentMethod === 'netbanking') {
       setShowNetbankingInterface(true)
-    } else if (paymentMethod === 'cards') {
+    } else if (paymentState.paymentMethod === 'cards') {
       setShowCardInterface(true)
-    } else if (paymentMethod === 'wallet') {
+    } else if (paymentState.paymentMethod === 'wallet') {
       setShowWalletInterface(true)
     } else {
-      await processRazorpayPayment()
+      const paymentData = {
+        amount: Math.round(checkoutData.total * 100), // Convert to paise
+        currency: 'INR',
+        receipt: `receipt_${Date.now()}`,
+        items: checkoutData.items,
+        userEmail: currentUser?.email,
+        userId: currentUser?._id,
+      }
+      await processPaymentWithRetry(paymentData)
     }
-  }
+  }, [checkoutData, razorpayLoaded, paymentState.paymentMethod, currentUser, processPaymentWithRetry, toast])
 
   if (!checkoutData || !isLoggedIn) {
     return (
@@ -796,7 +1009,7 @@ export default function PaymentPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <RadioGroup value={paymentState.paymentMethod} onValueChange={handlePaymentMethodChange}>
 
                     {/* Credit/Debit Cards */}
                     <div className="flex items-center space-x-3 p-4 border-2 rounded-lg hover:border-blue-300 transition-colors">
@@ -915,26 +1128,50 @@ export default function PaymentPage() {
                     </div>
                   )}
 
+                  {/* Error Alert */}
+                  {paymentState.error && (
+                    <Alert className="mb-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription className="flex items-center justify-between">
+                        <span>{paymentState.error}</span>
+                        {paymentState.retryCount > 0 && (
+                          <span className="text-sm text-gray-600 ml-2">
+                            Attempt {paymentState.retryCount}/{MAX_RETRY_ATTEMPTS}
+                          </span>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   {/* Payment Button */}
                   <Button
                     onClick={handlePayment}
-                    disabled={isProcessing || (!razorpayLoaded && paymentMethod !== 'cod')}
+                    disabled={paymentState.isProcessing || (!razorpayLoaded && paymentState.paymentMethod !== 'cod')}
                     className="w-full h-12 text-lg font-semibold bg-blue-600 hover:bg-blue-700"
                   >
-                    {isProcessing ? (
+                    {paymentState.isProcessing ? (
                       <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        <span>Processing...</span>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>
+                          {paymentState.retryCount > 0
+                            ? `Retrying... (${paymentState.retryCount}/${MAX_RETRY_ATTEMPTS})`
+                            : 'Processing...'
+                          }
+                        </span>
                       </div>
-                    ) : !razorpayLoaded && paymentMethod !== 'cod' ? (
+                    ) : !razorpayLoaded && paymentState.paymentMethod !== 'cod' ? (
                       <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
                         <span>Loading Payment System...</span>
                       </div>
                     ) : (
                       <div className="flex items-center space-x-2">
-                        <Banknote className="h-5 w-5" />
-                        <span>{paymentMethod === 'cod' ? 'Place Order' : `Pay ₹${checkoutData.total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`}</span>
+                        {paymentState.paymentMethod === 'cod' ? (
+                          <CheckCircle className="h-5 w-5" />
+                        ) : (
+                          <Banknote className="h-5 w-5" />
+                        )}
+                        <span>{paymentState.paymentMethod === 'cod' ? 'Place Order' : `Pay ₹${checkoutData.total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`}</span>
                       </div>
                     )}
                   </Button>
