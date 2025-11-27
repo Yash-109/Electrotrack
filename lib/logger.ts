@@ -101,6 +101,54 @@ class Logger {
     componentError(component: string, error: Error | unknown, context = 'Component'): void {
         this.error(`Component error in ${component}`, error, context)
     }
+
+    // Performance logging utility
+    performanceMetric(operation: string, duration: number, metadata?: unknown, context = 'Performance'): void {
+        const level = duration > 1000 ? LogLevel.WARN : duration > 500 ? LogLevel.INFO : LogLevel.DEBUG
+        const message = `${operation} completed in ${duration}ms`
+
+        if (level >= this.logLevel) {
+            const entry = this.createLogEntry(level, message, { duration, metadata, operation }, context)
+
+            if (level === LogLevel.WARN) {
+                console.warn(this.formatLog(entry), { duration, metadata })
+            } else {
+                console.log(this.formatLog(entry), { duration, metadata })
+            }
+        }
+    }
+
+    // Security event logging
+    securityEvent(eventType: 'login_attempt' | 'unauthorized_access' | 'suspicious_activity' | 'rate_limit_exceeded', details: unknown, context = 'Security'): void {
+        this.warn(`Security Event: ${eventType}`, details, context)
+    }
+
+    // Database operation logging
+    dbOperation(operation: string, collection: string, duration?: number, error?: Error, context = 'Database'): void {
+        if (error) {
+            this.error(`DB Error: ${operation} on ${collection}`, error, context)
+        } else {
+            const message = duration ? `${operation} on ${collection} (${duration}ms)` : `${operation} on ${collection}`
+            this.debug(message, { operation, collection, duration }, context)
+        }
+    }
+
+    // Memory and resource monitoring
+    resourceMetrics(metrics: { memoryUsage?: number; cpuUsage?: number; activeConnections?: number }, context = 'Resources'): void {
+        const critical = metrics.memoryUsage && metrics.memoryUsage > 0.9
+        const level = critical ? LogLevel.ERROR : LogLevel.DEBUG
+
+        if (level >= this.logLevel) {
+            const entry = this.createLogEntry(level, 'Resource metrics', metrics, context)
+
+            if (critical) {
+                console.error(this.formatLog(entry), metrics)
+            } else {
+                console.debug(this.formatLog(entry), metrics)
+            }
+        }
+    }
+}
 }
 
 // Export singleton instance
@@ -114,4 +162,8 @@ export const log = {
     error: (message: string, error?: Error | unknown, context?: string) => logger.error(message, error, context),
     apiError: (endpoint: string, error: Error | unknown) => logger.apiError(endpoint, error),
     componentError: (component: string, error: Error | unknown) => logger.componentError(component, error),
+    performanceMetric: (operation: string, duration: number, metadata?: unknown) => logger.performanceMetric(operation, duration, metadata),
+    securityEvent: (eventType: 'login_attempt' | 'unauthorized_access' | 'suspicious_activity' | 'rate_limit_exceeded', details: unknown) => logger.securityEvent(eventType, details),
+    dbOperation: (operation: string, collection: string, duration?: number, error?: Error) => logger.dbOperation(operation, collection, duration, error),
+    resourceMetrics: (metrics: { memoryUsage?: number; cpuUsage?: number; activeConnections?: number }) => logger.resourceMetrics(metrics),
 }

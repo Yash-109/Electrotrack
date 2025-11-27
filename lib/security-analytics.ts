@@ -2,15 +2,22 @@
 // Tracks patterns, detects suspicious activity, and provides insights
 
 import { getDb } from '@/lib/mongodb'
+import { log } from '@/lib/logger'
 
 export interface SecurityAlert {
-    type: 'suspicious_ip' | 'repeated_failures' | 'rapid_requests' | 'fake_email_pattern'
+    type: 'suspicious_ip' | 'repeated_failures' | 'rapid_requests' | 'fake_email_pattern' | 'bot_detection' | 'geo_anomaly' | 'timing_attack'
     severity: 'low' | 'medium' | 'high' | 'critical'
     details: string
     ip?: string
     email?: string
     count?: number
     timestamp: Date
+    metadata?: {
+        userAgent?: string
+        geolocation?: string
+        requestPattern?: string
+        confidence?: number
+    }
 }
 
 export interface AnalyticsData {
@@ -28,6 +35,14 @@ export interface AnalyticsData {
         successRate: number
         averageAttemptsPerVerification: number
         peakHour: number
+    }
+    advancedMetrics: {
+        botTraffic: number
+        suspiciousUserAgents: Array<{ userAgent: string; count: number }>
+        rapidFireAttacks: number
+        timingAttackAttempts: number
+        geoAnomalies: number
+        threatLevel: 'low' | 'medium' | 'high' | 'critical'
     }
 }
 
@@ -135,6 +150,73 @@ export async function generateSecurityAnalytics(timeframe: '1h' | '24h' | '7d' |
             }
         })
 
+        // Calculate advanced metrics
+        let botTrafficCount = 0
+        let rapidFireAttacks = 0
+        let timingAttackAttempts = 0
+        let geoAnomalies = 0
+        const suspiciousUserAgents: Map<string, number> = new Map()
+
+        records.forEach(record => {
+            // Detect bot traffic
+            if (record.userAgent) {
+                const botDetection = detectBotTraffic(record.userAgent, [])
+                if (botDetection.isBot) {
+                    botTrafficCount++
+                    const ua = record.userAgent.slice(0, 50) // Truncate for storage
+                    suspiciousUserAgents.set(ua, (suspiciousUserAgents.get(ua) || 0) + 1)
+                }
+            }
+
+            // Detect rapid-fire attacks (same IP, multiple attempts in short time)
+            if ((record.failedAttempts || 0) >= 5) {
+                rapidFireAttacks++
+            }
+
+            // Detect potential timing attacks
+            if (record.attemptTimings && Array.isArray(record.attemptTimings)) {
+                if (detectTimingAttack(record.attemptTimings)) {
+                    timingAttackAttempts++
+                }
+            }
+
+            // Detect geo anomalies (simplified)
+            if (record.clientIP && record.previousIPs) {
+                if (detectGeoAnomaly(record.clientIP, record.previousIPs)) {
+                    geoAnomalies++
+                }
+            }
+        })
+
+        const threatLevel = await assessOverallThreatLevel({
+            timeframe,
+            totalRequests,
+            successfulVerifications,
+            failedAttempts: totalFailedAttempts,
+            uniqueIPs: ipMap.size,
+            uniqueEmails: emailMap.size,
+            blockedRequests: records.filter(r => (r.failedAttempts || 0) >= 10).length,
+            topFailedEmails,
+            topIPs,
+            alerts,
+            trends: {
+                successRate: Math.round(successRate * 100) / 100,
+                averageAttemptsPerVerification: Math.round(averageAttemptsPerVerification * 100) / 100,
+                peakHour
+            },
+            advancedMetrics: {
+                botTraffic: botTrafficCount,
+                suspiciousUserAgents: Array.from(suspiciousUserAgents.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10)
+                    .map(([userAgent, count]) => ({ userAgent, count })),
+                rapidFireAttacks,
+                timingAttackAttempts,
+                geoAnomalies,
+                threatLevel: 'low' // Will be updated by assessOverallThreatLevel
+            }
+        })
+
         return {
             timeframe,
             totalRequests,
@@ -150,6 +232,17 @@ export async function generateSecurityAnalytics(timeframe: '1h' | '24h' | '7d' |
                 successRate: Math.round(successRate * 100) / 100,
                 averageAttemptsPerVerification: Math.round(averageAttemptsPerVerification * 100) / 100,
                 peakHour
+            },
+            advancedMetrics: {
+                botTraffic: botTrafficCount,
+                suspiciousUserAgents: Array.from(suspiciousUserAgents.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 10)
+                    .map(([userAgent, count]) => ({ userAgent, count })),
+                rapidFireAttacks,
+                timingAttackAttempts,
+                geoAnomalies,
+                threatLevel
             }
         }
 
@@ -264,4 +357,103 @@ export async function getSecurityStatus(): Promise<{
             summary: 'Security monitoring unavailable'
         }
     }
+}
+
+// Advanced threat detection algorithms
+export function detectBotTraffic(userAgent: string, requestTimings: number[]): { isBot: boolean; confidence: number } {
+    const botSignatures = [
+        /bot/i, /crawler/i, /spider/i, /scraper/i,
+        /automated/i, /script/i, /python/i, /curl/i,
+        /wget/i, /http/i, /api/i, /postman/i
+    ]
+
+    let confidence = 0
+
+    // Check user agent patterns
+    const hasBotSignature = botSignatures.some(pattern => pattern.test(userAgent))
+    if (hasBotSignature) confidence += 0.4
+
+    // Check for missing typical browser headers
+    if (!userAgent || userAgent.length < 10) confidence += 0.3
+
+    // Analyze request timing patterns
+    if (requestTimings.length >= 3) {
+        const avgInterval = requestTimings.reduce((sum, timing, i) =>
+            i > 0 ? sum + (timing - requestTimings[i - 1]) : sum, 0) / (requestTimings.length - 1)
+
+        // Too consistent timing (likely automated)
+        if (avgInterval > 0 && avgInterval < 100) confidence += 0.3
+
+        // Rapid-fire requests
+        if (avgInterval < 10) confidence += 0.4
+    }
+
+    return {
+        isBot: confidence >= 0.5,
+        confidence: Math.min(confidence, 1.0)
+    }
+}
+
+export function detectTimingAttack(attemptTimings: number[]): boolean {
+    if (attemptTimings.length < 5) return false
+
+    // Calculate variance in response times
+    const avg = attemptTimings.reduce((sum, time) => sum + time, 0) / attemptTimings.length
+    const variance = attemptTimings.reduce((sum, time) => sum + Math.pow(time - avg, 2), 0) / attemptTimings.length
+    const stdDev = Math.sqrt(variance)
+
+    // Low variance with many attempts suggests timing attack
+    return stdDev < 5 && attemptTimings.length >= 10
+}
+
+export function detectGeoAnomaly(ipAddress: string, previousLocations: string[]): boolean {
+    // Simplified geo anomaly detection
+    // In production, use actual geolocation service
+    const ipPrefix = ipAddress.split('.').slice(0, 2).join('.')
+
+    if (previousLocations.length === 0) return false
+
+    // Check if current IP is from a significantly different region
+    const isDifferentRegion = !previousLocations.some(loc => loc.startsWith(ipPrefix))
+    return isDifferentRegion && previousLocations.length >= 3
+}
+
+export async function assessOverallThreatLevel(analytics: AnalyticsData): Promise<'low' | 'medium' | 'high' | 'critical'> {
+    const { alerts, trends, advancedMetrics } = analytics
+
+    let score = 0
+
+    // Base scoring on alerts
+    alerts.forEach(alert => {
+        switch (alert.severity) {
+            case 'critical': score += 10; break
+            case 'high': score += 6; break
+            case 'medium': score += 3; break
+            case 'low': score += 1; break
+        }
+    })
+
+    // Factor in success rate
+    if (trends.successRate < 50) score += 8
+    else if (trends.successRate < 70) score += 4
+    else if (trends.successRate < 85) score += 2
+
+    // Advanced metrics
+    score += Math.min(advancedMetrics.botTraffic / 10, 5)
+    score += Math.min(advancedMetrics.rapidFireAttacks / 5, 4)
+    score += Math.min(advancedMetrics.timingAttackAttempts / 3, 3)
+    score += Math.min(advancedMetrics.geoAnomalies / 2, 2)
+
+    // Log threat assessment
+    log.info(`Threat assessment completed: score ${score}`, {
+        score,
+        alerts: alerts.length,
+        successRate: trends.successRate,
+        advancedMetrics
+    }, 'SecurityAnalytics')
+
+    if (score >= 20) return 'critical'
+    if (score >= 12) return 'high'
+    if (score >= 6) return 'medium'
+    return 'low'
 }
