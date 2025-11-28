@@ -3,6 +3,8 @@
  * Provides comprehensive validation for shipping forms and addresses
  */
 
+import { log } from './logger'
+
 export interface ShippingFormData {
     fullName: string
     email: string
@@ -18,6 +20,7 @@ export interface ShippingFormData {
 export interface ValidationResult {
     isValid: boolean
     errors: Record<string, string>
+    warnings?: string[]
 }
 
 /**
@@ -25,56 +28,76 @@ export interface ValidationResult {
  */
 export function validateShippingForm(data: ShippingFormData): ValidationResult {
     const errors: Record<string, string> = {}
+    const warnings: string[] = []
 
-    // Full name validation
-    if (!data.fullName.trim()) {
-        errors.fullName = "Full name is required"
-    } else if (data.fullName.trim().length < 2) {
-        errors.fullName = "Full name must be at least 2 characters"
-    } else if (!/^[a-zA-Z\s]+$/.test(data.fullName.trim())) {
-        errors.fullName = "Full name can only contain letters and spaces"
-    }
+    try {
+        // Full name validation
+        if (!data.fullName?.trim()) {
+            errors.fullName = "Full name is required"
+        } else if (data.fullName.trim().length < 2) {
+            errors.fullName = "Full name must be at least 2 characters"
+        } else if (!/^[a-zA-Z\s]+$/.test(data.fullName.trim())) {
+            errors.fullName = "Full name can only contain letters and spaces"
+        } else if (data.fullName.trim().length > 50) {
+            warnings.push("Full name is quite long, please verify it's correct")
+        }
 
-    // Email validation
-    if (!data.email.trim()) {
-        errors.email = "Email is required"
-    } else if (!isValidEmail(data.email)) {
-        errors.email = "Please enter a valid email address"
-    }
+        // Email validation
+        if (!data.email?.trim()) {
+            errors.email = "Email is required"
+        } else if (!isValidEmail(data.email)) {
+            errors.email = "Please enter a valid email address"
+        }
 
-    // Phone validation
-    if (!data.phone.trim()) {
-        errors.phone = "Phone number is required"
-    } else if (!isValidIndianPhoneNumber(data.phone)) {
-        errors.phone = "Please enter a valid Indian phone number"
-    }
+        // Phone validation
+        if (!data.phone?.trim()) {
+            errors.phone = "Phone number is required"
+        } else if (!isValidIndianPhoneNumber(data.phone)) {
+            errors.phone = "Please enter a valid Indian phone number"
+        }
 
-    // Address validation
-    if (!data.address.trim()) {
-        errors.address = "Address is required"
-    } else if (data.address.trim().length < 10) {
-        errors.address = "Please provide a complete address (minimum 10 characters)"
-    }
+        // Address validation
+        if (!data.address?.trim()) {
+            errors.address = "Address is required"
+        } else if (data.address.trim().length < 10) {
+            errors.address = "Please provide a complete address (minimum 10 characters)"
+        } else if (data.address.trim().length > 200) {
+            warnings.push("Address is very long, please ensure it's accurate")
+        }
 
-    // City validation
-    if (!data.city.trim()) {
-        errors.city = "City is required"
-    } else if (data.city.trim().length < 2) {
-        errors.city = "City name must be at least 2 characters"
-    } else if (!/^[a-zA-Z\s]+$/.test(data.city.trim())) {
-        errors.city = "City name can only contain letters and spaces"
-    }
+        // City validation
+        if (!data.city.trim()) {
+            errors.city = "City is required"
+        } else if (data.city.trim().length < 2) {
+            errors.city = "City name must be at least 2 characters"
+        } else if (!/^[a-zA-Z\s]+$/.test(data.city.trim())) {
+            errors.city = "City name can only contain letters and spaces"
+        }
 
-    // Pincode validation
-    if (!data.pincode.trim()) {
-        errors.pincode = "Pincode is required"
-    } else if (!isValidIndianPincode(data.pincode)) {
-        errors.pincode = "Please enter a valid 6-digit pincode"
-    }
+        // Pincode validation
+        if (!data.pincode?.trim()) {
+            errors.pincode = "Pincode is required"
+        } else if (!isValidIndianPincode(data.pincode)) {
+            errors.pincode = "Please enter a valid 6-digit pincode"
+        }
 
-    return {
-        isValid: Object.keys(errors).length === 0,
-        errors
+        if (Object.keys(errors).length > 0) {
+            log.warn('Shipping form validation failed', { errors, warnings }, 'ShippingValidation')
+        }
+
+        return {
+            isValid: Object.keys(errors).length === 0,
+            errors,
+            warnings: warnings.length > 0 ? warnings : undefined
+        }
+
+    } catch (error) {
+        log.error('Error validating shipping form', error, 'ShippingValidation')
+        return {
+            isValid: false,
+            errors: { general: 'Validation error occurred' },
+            warnings: ['Please check your input and try again']
+        }
     }
 }
 
