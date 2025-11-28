@@ -3,6 +3,16 @@
 
 import nodemailer from 'nodemailer'
 import crypto from 'crypto'
+import { log } from './logger'
+
+// Rate limiting configuration
+const EMAIL_RATE_LIMIT = {
+  maxEmailsPerHour: 50,
+  maxEmailsPerMinute: 5,
+  cooldownPeriod: 60000 // 1 minute
+}
+
+const emailAttempts = new Map<string, { count: number; lastAttempt: number }>()
 
 // Email configuration - In production, use environment variables
 const EMAIL_CONFIG = {
@@ -16,12 +26,50 @@ const EMAIL_CONFIG = {
   }
 }
 
+function checkRateLimit(email: string): { allowed: boolean; reason?: string } {
+  const now = Date.now()
+  const attempts = emailAttempts.get(email) || { count: 0, lastAttempt: 0 }
+
+  // Clean old attempts (older than 1 hour)
+  if (now - attempts.lastAttempt > 3600000) {
+    attempts.count = 0
+  }
+
+  // Check hourly limit
+  if (attempts.count >= EMAIL_RATE_LIMIT.maxEmailsPerHour) {
+    return { allowed: false, reason: 'Hourly email limit exceeded' }
+  }
+
+  // Check cooldown period
+  if (now - attempts.lastAttempt < EMAIL_RATE_LIMIT.cooldownPeriod && attempts.count > 0) {
+    return { allowed: false, reason: 'Please wait before requesting another email' }
+  }
+
+  return { allowed: true }
+}
+
+function updateRateLimit(email: string): void {
+  const now = Date.now()
+  const attempts = emailAttempts.get(email) || { count: 0, lastAttempt: 0 }
+
+  emailAttempts.set(email, {
+    count: attempts.count + 1,
+    lastAttempt: now
+  })
+}
+
 // Create reusable transporter
 let transporter: nodemailer.Transporter | null = null
 
 function getTransporter() {
   if (!transporter) {
-    transporter = nodemailer.createTransport(EMAIL_CONFIG)
+    try {
+      transporter = nodemailer.createTransporter(EMAIL_CONFIG)
+      log.info('Email transporter initialized', {}, 'EmailService')
+    } catch (error) {
+      log.error('Failed to initialize email transporter', error, 'EmailService')
+      throw error
+    }
   }
   return transporter
 }
