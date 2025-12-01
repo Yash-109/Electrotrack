@@ -362,9 +362,9 @@ export default function CartPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Cart Items ({cartItems.length})</CardTitle>
-                {isLoggedIn && currentUser && (
+                {session?.user && (
                   <p className="text-sm text-gray-600">
-                    Logged in as: {currentUser.name} ({currentUser.email})
+                    Logged in as: {session.user.name} ({session.user.email})
                   </p>
                 )}
               </CardHeader>
@@ -474,8 +474,8 @@ export default function CartPage() {
                 </div>
 
                 <div className="space-y-3 pt-4">
-                  <Button className="w-full" size="lg" onClick={handleCheckout} disabled={!isLoggedIn}>
-                    {isLoggedIn ? "Proceed to Checkout" : "Login to Checkout"}
+                  <Button className="w-full" size="lg" onClick={handleCheckout} disabled={!session?.user}>
+                    {session?.user ? "Proceed to Checkout" : "Login to Checkout"}
                   </Button>
 
                   <Link href="/dashboard">
@@ -485,7 +485,7 @@ export default function CartPage() {
                   </Link>
                 </div>
 
-                {!isLoggedIn && (
+                {!session?.user && (
                   <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
                     <p className="text-sm text-orange-800 text-center">
                       <AlertCircle className="h-4 w-4 inline mr-1" />
