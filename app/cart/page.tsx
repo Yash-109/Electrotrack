@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +13,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Minus, Plus, Trash2, ShoppingBag, AlertCircle, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { userAuth } from "@/lib/user-auth"
 import { CartService, type CartItem as ServiceCartItem } from "@/lib/cart-service"
 
 // Utility function for debouncing rapid updates
@@ -35,9 +35,8 @@ interface CartItem {
 }
 
 export default function CartPage() {
+  const { data: session, status } = useSession()
   const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [currentUser, setCurrentUser] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [updatingItems, setUpdatingItems] = useState<Set<number>>(new Set())
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
@@ -117,15 +116,14 @@ export default function CartPage() {
 
   useEffect(() => {
     const initializeCart = async () => {
-      const loggedIn = userAuth.isLoggedIn()
-      const user = userAuth.getCurrentUser()
-      setIsLoggedIn(loggedIn)
-      setCurrentUser(user)
+      if (status === "loading") {
+        return // Still loading authentication state
+      }
 
-      if (loggedIn && user) {
+      if (session?.user?.email) {
         // Load cart from database using new cart service
         try {
-          const dbItems = await CartService.getCart(user.email)
+          const dbItems = await CartService.getCart(session.user.email)
           console.log("=== CART LOADING DEBUG ===");
           console.log("Items from database:", dbItems);
 
@@ -163,12 +161,12 @@ export default function CartPage() {
     }
 
     initializeCart()
-  }, [])
+  }, [session, status])
 
   const updateQuantity = async (id: number, newQuantity: number) => {
     if (newQuantity < 1) return
 
-    if (!isLoggedIn || !currentUser) {
+    if (!session?.user?.email) {
       toast({
         title: "Login required",
         description: "Please login to update cart.",
@@ -201,7 +199,7 @@ export default function CartPage() {
       }))
 
       try {
-        await CartService.saveCart(currentUser.email, serviceItems)
+        await CartService.saveCart(session.user.email, serviceItems)
         // Dispatch cart updated event for header to update count
         window.dispatchEvent(new CustomEvent('cartUpdated'))
       } catch (error) {
@@ -233,7 +231,7 @@ export default function CartPage() {
   }
 
   const removeItem = async (id: number) => {
-    if (!isLoggedIn || !currentUser) {
+    if (!session?.user?.email) {
       toast({
         title: "Login required",
         description: "Please login to update cart.",
@@ -260,7 +258,7 @@ export default function CartPage() {
         category: item.category
       }))
 
-      await CartService.saveCart(currentUser.email, serviceItems)
+      await CartService.saveCart(session.user.email, serviceItems)
       // Dispatch cart updated event for header to update count
       window.dispatchEvent(new CustomEvent('cartUpdated'))
       toast({
@@ -287,7 +285,7 @@ export default function CartPage() {
   }
 
   const handleCheckout = () => {
-    if (!isLoggedIn) {
+    if (!session?.user?.email) {
       toast({
         title: "Login required",
         description: "Please login to proceed with checkout.",
@@ -309,7 +307,7 @@ export default function CartPage() {
     router.push("/shipping")
   }
 
-  if (isLoading) {
+  if (isLoading || status === "loading") {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
@@ -346,7 +344,7 @@ export default function CartPage() {
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Shopping Cart</h1>
 
         {/* Login Alert */}
-        {!isLoggedIn && (
+        {!session?.user && (
           <Alert className="mb-6 border-orange-200 bg-orange-50">
             <AlertCircle className="h-4 w-4 text-orange-600" />
             <AlertDescription className="text-orange-800">
