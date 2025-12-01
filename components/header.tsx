@@ -36,8 +36,15 @@ export function Header() {
       const cartItems = await CartService.getCart(userEmail)
 
       if (cartItems && Array.isArray(cartItems)) {
-        const totalItems = cartItems.reduce((total: number, item: any) => total + (item.quantity || 0), 0)
+        // Filter out items with zero or invalid quantities
+        const validItems = cartItems.filter(item => item && item.quantity > 0)
+        const totalItems = validItems.reduce((total: number, item: any) => total + (item.quantity || 0), 0)
         setCartItemCount(Math.max(0, totalItems)) // Ensure non-negative
+
+        // Debug logging
+        if (totalItems > 0) {
+          log.debug('Cart count updated', { userEmail, totalItems, validItems: validItems.length }, 'Header')
+        }
       } else {
         setCartItemCount(0)
       }
@@ -244,7 +251,7 @@ export function Header() {
               </Link>
               <Link href="/cart" className="flex items-center space-x-2 text-gray-700 hover:text-blue-600">
                 <ShoppingCart className="h-4 w-4" />
-                <span>Cart ({cartItemCount})</span>
+                <span>Cart{cartItemCount > 0 ? ` (${cartItemCount})` : ''}</span>
               </Link>
 
               {/* Mobile User Section */}
