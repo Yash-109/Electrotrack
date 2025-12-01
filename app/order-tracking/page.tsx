@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { OrderTracking } from "@/components/order-tracking"
@@ -12,11 +13,10 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Search, Package, Truck, Clock, MapPin, Phone, Mail } from "lucide-react"
-import { userAuth } from "@/lib/user-auth"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OrderTrackingPage() {
-    const [currentUser, setCurrentUser] = useState<any>(null)
+    const { data: session, status } = useSession()
     const [orders, setOrders] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [trackingInput, setTrackingInput] = useState("")
@@ -83,22 +83,19 @@ export default function OrderTrackingPage() {
 
     useEffect(() => {
         const initializePage = async () => {
-            const isLoggedIn = userAuth.isLoggedIn()
+            if (status === "loading") {
+                return // Still loading authentication state
+            }
 
-            if (isLoggedIn) {
-                const user = userAuth.getCurrentUser()
-                setCurrentUser(user)
-
-                if (user && user.email) {
-                    await fetchUserOrders(user.email)
-                }
+            if (session?.user?.email) {
+                await fetchUserOrders(session.user.email)
             }
 
             setLoading(false)
         }
 
         initializePage()
-    }, [])
+    }, [session, status])
 
     const getStatusIcon = (status: string) => {
         switch (status?.toLowerCase()) {
@@ -138,7 +135,7 @@ export default function OrderTrackingPage() {
         })
     }
 
-    if (loading) {
+    if (loading || status === "loading") {
         return (
             <div className="min-h-screen bg-gray-50">
                 <Header />
@@ -165,21 +162,21 @@ export default function OrderTrackingPage() {
                         <p className="text-gray-600 mt-2">Track your orders and view detailed delivery information</p>
                     </div>
 
-                    {currentUser ? (
+                    {session?.user ? (
                         /* Logged in user - show all orders */
                         <div className="space-y-6">
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Your Orders</CardTitle>
                                     <CardDescription>
-                                        Welcome back, {currentUser.name || currentUser.email}! Here are all your orders.
+                                        Welcome back, {session.user.name || session.user.email}! Here are all your orders.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <OrderTracking
                                         orders={orders}
-                                        onRefresh={() => fetchUserOrders(currentUser.email)}
-                                        currentUserEmail={currentUser.email}
+                                        onRefresh={() => session?.user?.email && fetchUserOrders(session.user.email)}
+                                        currentUserEmail={session?.user?.email || ''}
                                     />
                                 </CardContent>
                             </Card>
