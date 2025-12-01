@@ -149,7 +149,6 @@ class Logger {
         }
     }
 }
-}
 
 // Export singleton instance
 export const logger = Logger.getInstance()
