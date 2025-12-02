@@ -1,17 +1,26 @@
 "use client"
 
-import { useState, useEffect, Suspense, lazy } from "react"
+import { useState, useEffect } from "react"
 import { AdminRouteGuard } from "@/components/admin-route-guard"
 import { AdminHeader } from "@/components/admin-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users } from "lucide-react"
-
-// Lazy load the chart components to improve initial page load
-const ChartComponents = lazy(() => import("@/components/admin/chart-components").then(module => ({
-  default: module.ChartComponents
-})))
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Users, BarChart3, PieChart, LineChart } from "lucide-react"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  LineChart as RechartsLineChart,
+  Line
+} from 'recharts'
 
 import { useTransactionStore } from "@/lib/transaction-store"// Chart colors
 const COLORS = {
