@@ -60,15 +60,8 @@ class UserAuthService {
   getCurrentUser(): User | null {
     if (typeof window === "undefined") return null
 
-    const sessionData = localStorage.getItem(this.STORAGE_KEY)
-    if (!sessionData) return null
-
-    try {
-      const session: UserSession = JSON.parse(sessionData)
-      return session.user
-    } catch {
-      return null
-    }
+    const session = this.getValidSession()
+    return session ? session.user : null
   }
 
   logout(): void {
@@ -79,7 +72,13 @@ class UserAuthService {
 
   login(user: User): void {
     if (typeof window !== "undefined") {
-      const session: UserSession = { user }
+      const now = Date.now()
+      const session: UserSession = {
+        user,
+        createdAt: now,
+        expiresAt: now + SESSION_DURATION,
+        isValid: true
+      }
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(session))
     }
   }
