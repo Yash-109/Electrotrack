@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     const db = await getDb()
     const reviews = db.collection('reviews')
 
-    let query: any = {}
+    const query: Record<string, any> = {}
 
     if (productId) {
       query.productId = productId
