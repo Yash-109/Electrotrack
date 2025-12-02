@@ -56,7 +56,9 @@ function generateInvoiceHTML(order: any, customerEmail: string): string {
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
         return parts.join('.')
-    }    const formatDate = (date: string | Date) => new Date(date).toLocaleDateString('en-IN', {
+    }
+
+    const formatDate = (date: string | Date) => new Date(date).toLocaleDateString('en-IN', {
         day: '2-digit',
         month: 'long',
         year: 'numeric'
