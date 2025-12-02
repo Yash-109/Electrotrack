@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Phone, Mail, Clock, MapPin, MessageSquare, Facebook, Instagram, Twitter } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { log } from "@/lib/logger"
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -59,7 +60,7 @@ export default function ContactPage() {
         })
       }
     } catch (error) {
-      console.error('Contact form error:', error)
+      log.error('Contact form error', error, 'ContactForm')
       toast({
         title: "Failed to send message",
         description: "Please check your connection and try again.",

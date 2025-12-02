@@ -63,12 +63,13 @@ export function validateEnvironment(): { isValid: boolean; errors: string[] } {
 
 export function logEnvironmentStatus(): void {
     const validation = validateEnvironment()
+    const { log } = require('./logger')
 
     if (validation.isValid) {
-        console.log('✅ Environment validation passed')
+        log.info('Environment validation passed', {}, 'EnvValidation')
     } else {
-        console.error('❌ Environment validation failed:')
-        validation.errors.forEach(error => console.error(`  - ${error}`))
+        log.error('Environment validation failed', { errors: validation.errors }, 'EnvValidation')
+        validation.errors.forEach(error => log.error(`Environment error: ${error}`, {}, 'EnvValidation'))
 
         if (process.env.NODE_ENV === 'production') {
             throw new Error('Environment validation failed in production')
@@ -76,9 +77,10 @@ export function logEnvironmentStatus(): void {
     }
 
     // Log configuration status
-    console.log('\n📋 Configuration Status:')
-    console.log(`  Database: ${process.env.MONGODB_URI ? '✅' : '❌'} Connected`)
-    console.log(`  Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅' : '❌'} ${process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured'}`)
-    console.log(`  Razorpay: ${process.env.RAZORPAY_KEY_ID ? '✅' : '❌'} ${process.env.RAZORPAY_KEY_ID ? 'Configured' : 'Not configured'}`)
+    log.info('Configuration Status', {
+        database: process.env.MONGODB_URI ? 'Connected' : 'Not configured',
+        googleOAuth: process.env.GOOGLE_CLIENT_ID ? 'Configured' : 'Not configured',
+        razorpay: process.env.RAZORPAY_KEY_ID ? 'Configured' : 'Not configured'
+    }, 'EnvValidation')
     console.log(`  Admin Auth: ${process.env.ADMIN_USERNAME_1 ? '✅' : '❌'} ${process.env.ADMIN_USERNAME_1 ? 'Configured' : 'Using development defaults'}`)
 }

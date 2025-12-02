@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb'
 export async function POST(request: NextRequest) {
   try {
     const db = await getDb()
-    
+
     // Add sample orders
     const orders = db.collection('orders')
     const sampleOrders = [
@@ -77,9 +77,9 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date('2025-01-05')
       }
     ]
-    
+
     await orders.insertMany(sampleOrders)
-    
+
     // Add sample expenses
     const expenses = db.collection('expenses')
     const sampleExpenses = [
@@ -150,9 +150,9 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date('2025-01-03')
       }
     ]
-    
+
     await expenses.insertMany(sampleExpenses)
-    
+
     return NextResponse.json({
       success: true,
       message: 'Sample data added successfully',
@@ -161,9 +161,10 @@ export async function POST(request: NextRequest) {
         expensesAdded: sampleExpenses.length
       }
     })
-    
-  } catch (error: any) {
-    console.error('Sample data error:', error)
+
+  } catch (error) {
+    const { log } = require('@/lib/logger')
+    log.error('Sample data error', error, 'AdminSampleData')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

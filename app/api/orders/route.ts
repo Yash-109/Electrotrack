@@ -51,7 +51,8 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Get orders error:', error)
+    const { log } = require('@/lib/logger')
+    log.error('Get orders error', error, 'OrdersAPI')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

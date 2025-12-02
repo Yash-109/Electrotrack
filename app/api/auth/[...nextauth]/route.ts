@@ -35,7 +35,8 @@ const authOptions: AuthOptions = {
     },
     async signIn({ user, account, profile }: { user: any; account: any; profile: any }) {
       // Allow all Google sign-ins for now
-      console.log('Google Sign-in attempt:', { user: user?.email, account: account?.provider })
+      const { log } = require('@/lib/logger')
+      log.info('Google Sign-in attempt', { email: user?.email, provider: account?.provider }, 'Auth')
       return true
     },
     async redirect({ url, baseUrl }: { url: string; baseUrl: string }) {
