@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Minus, Plus, Trash2, ShoppingBag, AlertCircle, RefreshCw } from "lucide-react"
+import { Minus, Plus, Trash2, ShoppingBag, AlertCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { CartService, type CartItem as ServiceCartItem } from "@/lib/cart-service"
 
