@@ -84,7 +84,7 @@ export default function ContactPage() {
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-2xl md:text-4xl font-bold text-gray-800 mb-4">Contact Us</h1>
           <p className="text-base md:text-xl text-gray-600 max-w-2xl mx-auto">
-            Get in touch with us for any questions, support, or electronics consultation. We're here to help you find
+            Get in touch with us for any questions, support, or electronics consultation. We&apos;re here to help you find
             the perfect solution.
           </p>
         </div>
@@ -233,7 +233,7 @@ export default function ContactPage() {
                       <Label htmlFor="subject">Subject *</Label>
                       <Input
                         id="subject"
-                        placeholder="What's this about?"
+                        placeholder="What&apos;s this about?"
                         value={formData.subject}
                         onChange={(e) => handleInputChange("subject", e.target.value)}
                         required

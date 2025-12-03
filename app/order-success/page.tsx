@@ -324,7 +324,7 @@ function OrderSuccessContent() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Truck className="h-5 w-5 mr-2" />
-                What's Next?
+                What&apos;s Next?
               </CardTitle>
             </CardHeader>
             <CardContent>

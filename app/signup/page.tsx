@@ -189,7 +189,7 @@ export default function SignUpPage() {
                 </Alert>
 
                 <div className="bg-green-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-green-800 mb-2">What's Next:</h3>
+                  <h3 className="font-semibold text-green-800 mb-2">What&apos;s Next:</h3>
                   <ol className="text-green-700 text-sm space-y-1">
                     <li>1. Your email has been verified ✅</li>
                     <li>2. Your account is fully activated ✅</li>

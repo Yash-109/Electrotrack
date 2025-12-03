@@ -420,7 +420,7 @@ export default function LoginPage() {
                       <div className="space-y-2">
                         <p className="text-yellow-700 text-xs">
                           • Check your Gmail inbox for the verification email<br />
-                          • If the Gmail address doesn't exist, you won't receive any email<br />
+                          • If the Gmail address doesn&apos;t exist, you won&apos;t receive any email<br />
                           • Click the verification link to activate your account
                         </p>
                         <Button
@@ -585,7 +585,7 @@ export default function LoginPage() {
 
               <div className="mt-6 text-center">
                 <p className="text-sm text-gray-600">
-                  Don't have an account?{" "}
+                  Don&apos;t have an account?{" "}
                   <Link href="/signup" className="text-blue-600 hover:underline">
                     Sign up here
                   </Link>
