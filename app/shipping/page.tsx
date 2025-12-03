@@ -286,7 +286,7 @@ export default function ShippingPage() {
 
           // If user has addresses, find default or use first one
           if (addresses.length > 0) {
-            const defaultAddress = addresses.find((addr: any) => addr.isDefault) || addresses[0]
+            const defaultAddress = addresses.find((addr: ShippingAddress) => addr.isDefault) || addresses[0]
             setSelectedAddressId(defaultAddress.id)
             setIsNewAddress(false)
 

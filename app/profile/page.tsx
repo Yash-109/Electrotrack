@@ -17,13 +17,43 @@ import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { OrderTracking } from "@/components/order-tracking"
 
+interface User {
+  _id?: string
+  name: string
+  email: string
+  phone?: string
+  image?: string
+  shippingAddresses?: Address[]
+}
+
+interface Order {
+  _id: string
+  orderId: string
+  status: string
+  total: number
+  createdAt: string
+  items: any[]
+}
+
+interface Address {
+  id?: string
+  fullName: string
+  phone: string
+  address: string
+  city: string
+  state: string
+  pincode: string
+  type?: 'home' | 'office' | 'other'
+  isDefault?: boolean
+}
+
 export default function ProfilePage() {
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [editedUser, setEditedUser] = useState<any>({})
+  const [editedUser, setEditedUser] = useState<Partial<User>>({})
   const [loading, setLoading] = useState(true)
-  const [orders, setOrders] = useState<any[]>([])
-  const [addresses, setAddresses] = useState<any[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
+  const [addresses, setAddresses] = useState<Address[]>([])
   const [isAddingAddress, setIsAddingAddress] = useState(false)
   const [newAddress, setNewAddress] = useState({
     fullName: '',
@@ -120,7 +150,7 @@ export default function ProfilePage() {
       if (data.success) {
         // Update localStorage as well
         const users = JSON.parse(localStorage.getItem("users") || "[]")
-        const userIndex = users.findIndex((u: any) => u.email === currentUser.email)
+        const userIndex = users.findIndex((u: User) => u.email === currentUser.email)
 
         if (userIndex !== -1) {
           users[userIndex] = { ...users[userIndex], ...editedUser }

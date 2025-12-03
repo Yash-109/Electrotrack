@@ -12,15 +12,42 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Search, Package, Truck, Clock, MapPin, Phone, Mail } from "lucide-react"
+import { Search, Package, Truck, Clock, Phone, Mail } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+
+interface Order {
+    _id: string
+    orderId: string
+    userEmail: string
+    total: number
+    status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+    createdAt: string
+    estimatedDelivery?: string
+    trackingHistory?: TrackingEvent[]
+    items: OrderItem[]
+}
+
+interface TrackingEvent {
+    status: string
+    timestamp: string
+    description: string
+    location?: string
+}
+
+interface OrderItem {
+    id: number
+    name: string
+    price: number
+    quantity: number
+    image?: string
+}
 
 export default function OrderTrackingPage() {
     const { data: session, status } = useSession()
-    const [orders, setOrders] = useState<any[]>([])
+    const [orders, setOrders] = useState<Order[]>([])
     const [loading, setLoading] = useState(true)
     const [trackingInput, setTrackingInput] = useState("")
-    const [guestOrder, setGuestOrder] = useState<any>(null)
+    const [guestOrder, setGuestOrder] = useState<Order | null>(null)
     const [guestTracking, setGuestTracking] = useState(false)
     const router = useRouter()
     const { toast } = useToast()
