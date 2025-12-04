@@ -42,20 +42,19 @@ export async function GET(request: NextRequest) {
 
 function generateInvoiceHTML(order: any, customerEmail: string): string {
     const formatCurrency = (amount: number) => {
-        if (!amount || isNaN(amount)) return '₹0.00'
+        // Ensure amount is a valid number
+        let num = 0;
+        if (amount !== null && amount !== undefined && !isNaN(Number(amount))) {
+            num = Number(amount);
+        }
 
-        // Convert to number and ensure it's valid
-        const num = parseFloat(amount.toString())
-        if (isNaN(num)) return '₹0.00'
-
-        // Format with 2 decimal places
-        const formatted = num.toFixed(2)
-        const parts = formatted.split('.')
-
-        // Add thousands separator manually
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-
-        return '₹' + parts.join('.')
+        // Format to Indian currency format
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
     }
 
     const formatDate = (date: string | Date) => new Date(date).toLocaleDateString('en-IN', {
@@ -151,6 +150,11 @@ function generateInvoiceHTML(order: any, customerEmail: string): string {
         td {
             padding: 12px;
             border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+        }
+        td:nth-child(4), td:nth-child(5) {
+            text-align: right;
+            font-family: 'Courier New', monospace;
         }
         tr:nth-child(even) td {
             background: #f9fafb;
@@ -166,6 +170,12 @@ function generateInvoiceHTML(order: any, customerEmail: string): string {
         .totals-table td {
             border: none;
             padding: 8px 12px;
+            white-space: nowrap;
+        }
+        .totals-table td:last-child {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            min-width: 120px;
         }
         .total-row {
             font-weight: bold;
