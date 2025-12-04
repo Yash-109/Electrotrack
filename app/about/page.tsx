@@ -16,7 +16,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-6">About Radhika Electronics</h1>
           <p className="text-xl md:text-2xl mb-8 opacity-90">
-            Your trusted partner for premium electronics in Surat. We've been serving customers with quality products
+            Your trusted partner for premium electronics in Surat. We&apos;ve been serving customers with quality products
             and exceptional service since our establishment.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
@@ -129,7 +129,7 @@ export default function AboutPage() {
           <div className="max-w-4xl mx-auto space-y-6 text-gray-700 leading-relaxed">
             <p>
               Radhika Electronics was founded with a simple mission: to provide high-quality electronics at competitive
-              prices with exceptional customer service. What started as a small shop has grown into one of Surat's most
+              prices with exceptional customer service. What started as a small shop has grown into one of Surat&apos;s most
               trusted electronics retailers.
             </p>
             <p>
@@ -138,7 +138,7 @@ export default function AboutPage() {
               our stringent quality standards.
             </p>
             <p>
-              Over the years, we've built lasting relationships with our customers by providing honest advice,
+              Over the years, we&apos;ve built lasting relationships with our customers by providing honest advice,
               competitive pricing, and reliable after-sales service. Our team of experienced professionals is always
               ready to help you find the perfect electronic solution for your needs.
             </p>

@@ -1346,7 +1346,7 @@ export default function PaymentPage() {
             {/* Note */}
             <div className="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
               <p className="text-xs text-yellow-800 text-center">
-                ⚡ Demo Mode: Click "Payment Done" after scanning to simulate successful payment
+                ⚡ Demo Mode: Click &quot;Payment Done&quot; after scanning to simulate successful payment
               </p>
             </div>
           </div>
@@ -1441,7 +1441,7 @@ export default function PaymentPage() {
             {/* Note */}
             <div className="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
               <p className="text-xs text-yellow-800 text-center">
-                🔒 Demo Mode: Click "Proceed to Bank" to simulate successful netbanking payment
+                🔒 Demo Mode: Click &quot;Proceed to Bank&quot; to simulate successful netbanking payment
               </p>
             </div>
           </div>
@@ -1545,7 +1545,7 @@ export default function PaymentPage() {
             {/* Note */}
             <div className="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
               <p className="text-xs text-yellow-800 text-center">
-                🔒 Demo Mode: Click "Pay Now" to simulate successful card payment
+                🔒 Demo Mode: Click &quot;Pay Now&quot; to simulate successful card payment
               </p>
             </div>
           </div>
@@ -1647,7 +1647,7 @@ export default function PaymentPage() {
             {/* Note */}
             <div className="w-full bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
               <p className="text-xs text-yellow-800 text-center">
-                💳 Demo Mode: Click "Pay with Wallet" to simulate successful wallet payment
+                💳 Demo Mode: Click &quot;Pay with Wallet&quot; to simulate successful wallet payment
               </p>
             </div>
           </div>

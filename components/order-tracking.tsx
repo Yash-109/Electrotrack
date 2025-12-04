@@ -664,7 +664,7 @@ interface OrderTrackingProps {
                                                             Expected Delivery: {formatDate(selectedOrder.estimatedDelivery)}
                                                         </p>
                                                         <p className="text-sm text-blue-700">
-                                                            We'll notify you once your package is out for delivery
+                                                            We&apos;ll notify you once your package is out for delivery
                                                         </p>
                                                     </div>
                                                 </div>

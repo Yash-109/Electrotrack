@@ -130,7 +130,7 @@ function OrderSuccessContent() {
               <CheckCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             </div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">Order Not Found</h1>
-            <p className="text-gray-600 mb-8">We couldn't find your order details. Please check your email for the order confirmation.</p>
+            <p className="text-gray-600 mb-8">We couldn&apos;t find your order details. Please check your email for the order confirmation.</p>
             <Link href="/dashboard">
               <Button>Go to Dashboard</Button>
             </Link>
@@ -333,7 +333,7 @@ function OrderSuccessContent() {
                   <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">1</div>
                   <div>
                     <p className="font-medium">Order Confirmation</p>
-                    <p className="text-sm text-gray-600">You'll receive an email confirmation shortly</p>
+                    <p className="text-sm text-gray-600">You&apos;ll receive an email confirmation shortly</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">

@@ -119,7 +119,7 @@ export default function ContactPage() {
                     <h3 className="font-semibold">Email Address</h3>
                   </div>
                   <p className="text-gray-600 ml-7">jayeshsavaliya3011@gmail.com</p>
-                  <p className="text-sm text-gray-500 ml-7">We'll respond within 24 hours</p>
+                  <p className="text-sm text-gray-500 ml-7">We&apos;ll respond within 24 hours</p>
                 </div>
 
                 {/* Business Hours */}
@@ -191,7 +191,7 @@ export default function ContactPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Send us a Message</CardTitle>
-                <p className="text-gray-600">Fill out the form below and we'll get back to you as soon as possible.</p>
+                <p className="text-gray-600">Fill out the form below and we&apos;ll get back to you as soon as possible.</p>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">

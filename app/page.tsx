@@ -84,7 +84,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-gray-800">Customer First</h3>
               <p className="text-sm sm:text-base text-gray-600">
-                Your satisfaction is our priority. We go the extra mile to ensure you're happy
+                Your satisfaction is our priority. We go the extra mile to ensure you&apos;re happy
               </p>
             </div>
             <div className="text-center">

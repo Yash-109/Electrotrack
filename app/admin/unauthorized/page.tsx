@@ -18,7 +18,7 @@ export default function UnauthorizedPage() {
         </CardHeader>
         <CardContent className="text-center space-y-4">
           <p className="text-gray-600">
-            Your current role doesn't have the required permissions to view this page. Please contact your administrator
+            Your current role doesn&apos;t have the required permissions to view this page. Please contact your administrator
             if you believe this is an error.
           </p>
 
