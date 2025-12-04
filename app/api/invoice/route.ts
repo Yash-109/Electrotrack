@@ -42,19 +42,22 @@ export async function GET(request: NextRequest) {
 
 function generateInvoiceHTML(order: any, customerEmail: string): string {
     const formatCurrency = (amount: number) => {
-        // Ensure amount is a valid number
+        // Ensure amount is a valid number and clean it
         let num = 0;
-        if (amount !== null && amount !== undefined && !isNaN(Number(amount))) {
-            num = Number(amount);
+        if (amount !== null && amount !== undefined) {
+            // Convert to string first, then clean any non-numeric characters except decimal point
+            const cleaned = String(amount).replace(/[^\d.-]/g, '');
+            num = parseFloat(cleaned) || 0;
         }
 
-        // Format to Indian currency format
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(num);
+        // Manual formatting for better control
+        const formatted = num.toFixed(2);
+        const parts = formatted.split('.');
+
+        // Add Indian number formatting (lakhs/crores style)
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+        return `₹${parts.join('.')}`;
     }
 
     const formatDate = (date: string | Date) => new Date(date).toLocaleDateString('en-IN', {
