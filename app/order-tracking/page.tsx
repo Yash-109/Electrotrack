@@ -48,22 +48,24 @@ export default function OrderTrackingPage() {
         try {
             setLoading(true)
             const response = await fetch(`/api/orders?userEmail=${encodeURIComponent(userEmail)}`)
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            }
+
             const data = await response.json()
 
             if (data.success) {
                 setOrders(data.orders || [])
             } else {
-                toast({
-                    title: "Error",
-                    description: "Failed to load orders. Please try again.",
-                    variant: "destructive",
-                })
+                throw new Error(data.message || 'Failed to load orders')
             }
         } catch (error) {
             console.error('Failed to fetch orders:', error)
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
             toast({
                 title: "Error",
-                description: "Failed to load orders. Please try again.",
+                description: `Failed to load orders: ${errorMessage}`,
                 variant: "destructive",
             })
         } finally {
