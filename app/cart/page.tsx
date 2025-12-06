@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
+import { log } from "@/lib/logger"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
@@ -54,7 +55,7 @@ export default function CartPage() {
         // Reset retry attempts on successful update
         setRetryAttempts(new Map())
       } catch (error) {
-        console.error('Debounced cart update failed:', error)
+        log.error('Cart update failed during debounce', error, 'CartPage')
         throw error
       }
     }, 1000),

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { log } from "@/lib/logger"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -230,7 +231,7 @@ interface OrderTrackingProps {
                 })
             }
         } catch (error) {
-            console.error('Delete order error:', error)
+            log.error('Failed to delete order', error, 'OrderTracking')
             toast({
                 title: "Delete failed",
                 description: "An error occurred while deleting the order.",
@@ -268,7 +269,7 @@ interface OrderTrackingProps {
                     description: `PDF invoice for order ${order.orderId} has been downloaded successfully.`,
                 })
             } catch (pdfError) {
-                console.warn('PDF generation failed, falling back to HTML:', pdfError)
+                log.warn('PDF generation failed, using HTML fallback', pdfError, 'InvoiceGenerator')
 
                 // Fallback to HTML download
                 const downloadUrl = `/api/invoice?orderId=${encodeURIComponent(order.orderId)}&userEmail=${encodeURIComponent(currentUserEmail)}`
@@ -280,7 +281,7 @@ interface OrderTrackingProps {
                 })
             }
         } catch (error) {
-            console.error('Error generating invoice:', error)
+            log.error('Failed to generate invoice', error, 'InvoiceGenerator')
             toast({
                 title: "Error",
                 description: "Failed to generate invoice. Please try again or contact support.",
@@ -415,12 +416,8 @@ interface OrderTrackingProps {
                                                             alt={item.name || "Product"}
                                                             className="w-8 h-8 object-cover rounded bg-gray-100 border-2 border-blue-200"
                                                             onError={(e) => {
-                                                                console.error(`Preview image failed for ${item.name}: ${item.image}`);
                                                                 e.currentTarget.src = "/placeholder.svg";
                                                                 e.currentTarget.style.border = "2px solid red";
-                                                            }}
-                                                            onLoad={() => {
-                                                                console.log(`Preview image loaded for ${item.name}: ${item.image}`);
                                                             }}
                                                         />
                                                     </div>
@@ -706,44 +703,36 @@ interface OrderTrackingProps {
                                     </CardHeader>
                                     <CardContent>
                                         <div className="space-y-4">
-                                            {selectedOrder.items.map((item: any, index: number) => {
-                                                console.log(`Rendering item ${index + 1}:`, item);
-                                                console.log(`Item image path:`, item.image);
-                                                return (
-                                                    <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg">
-                                                        <div className="relative">
-                                                            <img
-                                                                src={item.image && item.image !== "" ? item.image : "/placeholder.svg"}
-                                                                alt={item.name || "Product"}
-                                                                className="w-16 h-16 object-cover rounded-md bg-gray-100 border-2 border-blue-200"
-                                                                onError={(e) => {
-                                                                    console.error(`Image load failed for item ${index + 1} - ${item.name}:`, item.image);
-                                                                    e.currentTarget.src = "/placeholder.svg";
-                                                                    e.currentTarget.style.border = "2px solid red";
-                                                                }}
-                                                                onLoad={() => {
-                                                                    console.log(`Image loaded successfully for item ${index + 1} - ${item.name}:`, item.image);
-                                                                }}
-                                                            />
-                                                            {(!item.image || item.image === "") && (
-                                                                <div className="absolute inset-0 flex items-center justify-center bg-red-200 rounded-md opacity-75">
-                                                                    <span className="text-xs text-red-800 font-bold">NO IMG</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <h4 className="font-medium">{item.name}</h4>
-                                                            <p className="text-sm text-gray-600">Category: {item.category}</p>
-                                                            <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                                                            <p className="text-xs text-gray-400">Image: {item.image || "No image path"}</p>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
-                                                            <p className="text-sm text-gray-500">{formatCurrency(item.price)} each</p>
-                                                        </div>
+                                            {selectedOrder.items.map((item: any, index: number) => (
+                                                <div key={index} className="flex items-center space-x-4 p-4 border rounded-lg">
+                                                    <div className="relative">
+                                                        <img
+                                                            src={item.image && item.image !== "" ? item.image : "/placeholder.svg"}
+                                                            alt={item.name || "Product"}
+                                                            className="w-16 h-16 object-cover rounded-md bg-gray-100 border-2 border-blue-200"
+                                                            onError={(e) => {
+                                                                e.currentTarget.src = "/placeholder.svg";
+                                                                e.currentTarget.style.border = "2px solid red";
+                                                            }}
+                                                        />
+                                                        {(!item.image || item.image === "") && (
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-red-200 rounded-md opacity-75">
+                                                                <span className="text-xs text-red-800 font-bold">NO IMG</span>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                )
-                                            })}
+                                                    <div className="flex-1">
+                                                        <h4 className="font-medium">{item.name}</h4>
+                                                        <p className="text-sm text-gray-600">Category: {item.category}</p>
+                                                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                                                        <p className="text-xs text-gray-400">Image: {item.image || "No image path"}</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
+                                                        <p className="text-sm text-gray-500">{formatCurrency(item.price)} each</p>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
                                     </CardContent>
                                 </Card>

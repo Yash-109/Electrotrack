@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { log } from "@/lib/logger"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { User, Mail, Phone, MapPin, Edit, Save, X, Package, Trash2, Plus } from "lucide-react"
@@ -79,7 +80,7 @@ export default function ProfilePage() {
         return data.user
       }
     } catch (error) {
-      console.error('Failed to fetch profile:', error)
+      log.error('Failed to fetch user profile', error, 'ProfilePage')
     }
     return null
   }

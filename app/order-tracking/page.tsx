@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer"
 import { OrderTracking } from "@/components/order-tracking"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
+import { log } from "@/lib/logger"
 
 interface Order {
     _id: string
@@ -61,7 +62,7 @@ export default function OrderTrackingPage() {
                 throw new Error(data.message || 'Failed to load orders')
             }
         } catch (error) {
-            console.error('Failed to fetch orders:', error)
+            log.error('Failed to fetch user orders', error, 'OrderTracking')
             const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
             toast({
                 title: "Error",

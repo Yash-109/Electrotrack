@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useSession } from "next-auth/react"
+import { log } from "@/lib/logger"
 
 export default function GetStartedButton() {
     const { data: session, status } = useSession()
@@ -21,7 +22,7 @@ export default function GetStartedButton() {
                         const parsedUser = JSON.parse(userSession)
                         setLocalUser(parsedUser.user)
                     } catch (error) {
-                        console.error('Error parsing user session:', error)
+                        log.error('Failed to parse user session from localStorage', error, 'GetStartedButton')
                         // Clear corrupted session data
                         localStorage.removeItem("radhika_user_session")
                         setLocalUser(null)

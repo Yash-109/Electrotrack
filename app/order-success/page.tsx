@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CheckCircle, Package, Truck, Home, CreditCard, Calendar, User, MapPin } from "lucide-react"
+import { log } from "@/lib/logger"
 import { userAuth } from "@/lib/user-auth"
 import { CartService } from "@/lib/cart-service"
 
@@ -49,7 +50,7 @@ function OrderSuccessContent() {
                     await CartService.clearCart(user.email)
                     // Cart cleared successfully after order
                   } catch (error) {
-                    console.error('Failed to clear cart after order:', error)
+                    log.error('Failed to clear cart after successful order', error, 'OrderSuccess')
                   }
                 }
                 localStorage.removeItem("radhika_checkout_cart")
@@ -58,7 +59,7 @@ function OrderSuccessContent() {
               }
             }
           } catch (error) {
-            console.error('Failed to fetch order from API:', error)
+            log.error('Failed to fetch order details from API', error, 'OrderSuccess')
           }
 
           // If API fails, try localStorage
@@ -97,7 +98,7 @@ function OrderSuccessContent() {
         // localStorage.removeItem("radhika_current_order") // Keep this for refreshes
 
       } catch (error) {
-        console.error('Error loading order details:', error)
+        log.error('Failed to load order details', error, 'OrderSuccess')
       } finally {
         setLoading(false)
       }

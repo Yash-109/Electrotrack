@@ -8,6 +8,7 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { log } from "@/lib/logger"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
@@ -226,7 +227,7 @@ export default function ShippingPage() {
       })
 
     } catch (error) {
-      console.error('Address verification error:', error)
+      log.error('Address verification failed', error, 'ShippingPage')
       toast({
         title: "Verification failed",
         description: "Could not verify address. Please check and try again.",
@@ -307,10 +308,10 @@ export default function ShippingPage() {
             ...prev,
             fullName: user.name || "",
             email: user.email || "",
-          }))
+          })
         }
       } catch (error) {
-        console.error('Failed to load user profile:', error)
+        log.error('Failed to load user profile data', error, 'ShippingPage')
         // Fallback to basic user info
         setShippingData((prev) => ({
           ...prev,
@@ -511,7 +512,7 @@ export default function ShippingPage() {
             throw new Error(result.error || 'Failed to save order')
           }
         } catch (orderError) {
-          console.error("Error saving COD order:", orderError)
+          log.error('Failed to save COD order to database', orderError, 'ShippingPage')
           toast({
             title: "Error saving order",
             description: "Order was processed but may not appear in your order history. Please contact support.",
@@ -525,7 +526,7 @@ export default function ShippingPage() {
         }
       }
     } catch (error) {
-      console.error("Error placing order:", error)
+      log.error('Failed to place order', error, 'ShippingPage')
       toast({
         title: "Error placing order",
         description: "Something went wrong. Please try again.",
