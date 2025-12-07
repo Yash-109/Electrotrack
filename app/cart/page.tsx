@@ -151,7 +151,7 @@ export default function CartPage() {
           console.log("Converted UI items:", uiItems);
           setCartItems(uiItems)
         } catch (error) {
-          console.error('Failed to load cart:', error)
+          log.error('Failed to load cart from service', error, 'CartPage')
         }
       } else {
         // Not logged in - show empty cart
@@ -204,7 +204,7 @@ export default function CartPage() {
         // Dispatch cart updated event for header to update count
         window.dispatchEvent(new CustomEvent('cartUpdated'))
       } catch (error) {
-        console.error('Failed to update cart:', error)
+        log.error('Failed to update cart in service', error, 'CartPage')
         // Revert local changes on error
         setCartItems(cartItems)
         toast({
@@ -221,7 +221,7 @@ export default function CartPage() {
         })
       }
     } catch (error) {
-      console.error('Cart update error:', error)
+      log.error('Cart update operation failed', error, 'CartPage')
     } finally {
       setUpdatingItems(prev => {
         const newSet = new Set(prev)
@@ -267,7 +267,7 @@ export default function CartPage() {
         description: "Item has been removed from your cart.",
       })
     } catch (error) {
-      console.error('Failed to remove item:', error)
+      log.error('Failed to remove item from cart', error, 'CartPage')
       // Revert local changes on error
       setCartItems(cartItems)
       toast({
