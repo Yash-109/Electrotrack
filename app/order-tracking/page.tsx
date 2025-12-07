@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Header } from "@/components/header"
@@ -45,7 +45,7 @@ export default function OrderTrackingPage() {
     const router = useRouter()
 
     // Fetch user orders
-    const fetchUserOrders = async (userEmail: string) => {
+    const fetchUserOrders = useCallback(async (userEmail: string) => {
         try {
             setLoading(true)
             const response = await fetch(`/api/orders?userEmail=${encodeURIComponent(userEmail)}`)
@@ -72,7 +72,7 @@ export default function OrderTrackingPage() {
         } finally {
             setLoading(false)
         }
-    }
+    }, [toast])
 
     useEffect(() => {
         const initializePage = async () => {
@@ -88,7 +88,7 @@ export default function OrderTrackingPage() {
         }
 
         initializePage()
-    }, [session, status])
+    }, [session, status, fetchUserOrders])
 
     if (loading || status === "loading") {
         return (

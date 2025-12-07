@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -70,7 +70,7 @@ export default function ProfilePage() {
   const { toast } = useToast()
 
   // Fetch user profile data from API
-  const fetchUserProfile = async (userEmail: string) => {
+  const fetchUserProfile = useCallback(async (userEmail: string) => {
     try {
       const response = await fetch(`/api/user/profile?userId=${encodeURIComponent(userEmail)}`)
       const data = await response.json()
@@ -83,10 +83,10 @@ export default function ProfilePage() {
       log.error('Failed to fetch user profile', error, 'ProfilePage')
     }
     return null
-  }
+  }, [])
 
   // Fetch user orders from API
-  const fetchUserOrders = async (userEmail: string) => {
+  const fetchUserOrders = useCallback(async (userEmail: string) => {
     try {
       const response = await fetch(`/api/orders?userEmail=${encodeURIComponent(userEmail)}`)
       const data = await response.json()
@@ -95,9 +95,9 @@ export default function ProfilePage() {
         setOrders(data.orders || [])
       }
     } catch (error) {
-      console.error('Failed to fetch orders:', error)
+      log.error('Failed to fetch user orders', error, 'ProfilePage')
     }
-  }
+  }, [])
 
   useEffect(() => {
     const checkAuth = async () => {
