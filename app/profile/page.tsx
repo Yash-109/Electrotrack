@@ -24,6 +24,10 @@ interface User {
   email: string
   phone?: string
   image?: string
+  picture?: string
+  provider?: string
+  address?: string
+  businessType?: string
   shippingAddresses?: Address[]
 }
 
@@ -131,6 +135,8 @@ export default function ProfilePage() {
   }, [router])
 
   const handleSaveProfile = async () => {
+    if (!currentUser) return
+
     try {
       const response = await fetch('/api/user/profile', {
         method: 'POST',
@@ -161,7 +167,7 @@ export default function ProfilePage() {
           localStorage.setItem("currentUser", JSON.stringify(users[userIndex]))
         }
 
-        setCurrentUser(editedUser)
+        setCurrentUser(editedUser as User)
         setIsEditing(false)
 
         toast({
@@ -181,11 +187,15 @@ export default function ProfilePage() {
   }
 
   const handleCancelEdit = () => {
-    setEditedUser(currentUser)
+    if (currentUser) {
+      setEditedUser(currentUser)
+    }
     setIsEditing(false)
   }
 
   const handleAddAddress = async () => {
+    if (!currentUser) return
+
     try {
       const response = await fetch('/api/user/profile', {
         method: 'POST',
@@ -232,6 +242,8 @@ export default function ProfilePage() {
   }
 
   const handleDeleteAddress = async (addressId: string) => {
+    if (!currentUser) return
+
     try {
       const response = await fetch('/api/user/profile', {
         method: 'POST',
@@ -557,7 +569,7 @@ export default function ProfilePage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDeleteAddress(address.id)}
+                                onClick={() => address.id && handleDeleteAddress(address.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
