@@ -108,7 +108,9 @@ export default function ProfilePage() {
 
       const user = userAuth.getCurrentUser()
       setCurrentUser(user)
-      setEditedUser(user)
+      if (user) {
+        setEditedUser(user)
+      }
 
       if (user && user.email) {
         // Fetch profile and orders from API
