@@ -27,11 +27,23 @@ interface CartData {
     price: number
     quantity: number
     category: string
+    image?: string
   }>
   subtotal: number
   tax: number
   shipping: number
   total: number
+}
+
+interface ShippingAddress {
+  id: string
+  fullName: string
+  phone: string
+  address: string
+  city: string
+  state: string
+  pincode: string
+  isDefault?: boolean
 }
 
 export default function ShippingPage() {
@@ -60,6 +72,104 @@ export default function ShippingPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { addOnlineSale } = useAdminIntegration()
+
+  // Input sanitization utility
+  const sanitizeInput = (value: string, type: string = "text") => {
+    let sanitized = value.trim()
+
+    switch (type) {
+      case "name":
+        // Remove numbers and special characters, allow only letters and spaces
+        sanitized = sanitized.replace(/[^a-zA-Z\s]/g, "")
+        break
+      case "phone":
+        // Remove non-digit characters
+        sanitized = sanitized.replace(/\D/g, "")
+        break
+      case "pincode":
+        // Remove non-digit characters and limit to 6 digits
+        sanitized = sanitized.replace(/\D/g, "").slice(0, 6)
+        break
+      case "email":
+        // Remove spaces
+        sanitized = sanitized.replace(/\s/g, "")
+        break
+      case "address":
+        // Remove script tags and dangerous characters
+        sanitized = sanitized.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+        break
+    }
+
+    return sanitized
+  }
+
+  // Real-time field validation with error clearing
+  const validateField = (name: string, value: string) => {
+    let error = ""
+
+    switch (name) {
+      case "fullName":
+        if (!value.trim()) {
+          error = "Full name is required"
+        } else if (value.trim().length < 2) {
+          error = "Name must be at least 2 characters"
+        } else if (!/^[a-zA-Z\s]+$/.test(value)) {
+          error = "Name can only contain letters and spaces"
+        }
+        break
+      case "email":
+        if (!value.trim()) {
+          error = "Email is required"
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          error = "Please enter a valid email address"
+        }
+        break
+      case "phone":
+        if (!value.trim()) {
+          error = "Phone number is required"
+        } else if (!/^[0-9]{10}$/.test(value.replace(/\s+/g, ""))) {
+          error = "Phone number must be 10 digits"
+        }
+        break
+      case "address":
+        if (!value.trim()) {
+          error = "Address is required"
+        } else if (value.trim().length < 20) {
+          error = "Please provide complete address (minimum 20 characters)"
+        } else if (!/^\d+/.test(value) && !/^[A-Za-z]-?\d+/.test(value)) {
+          error = "Address must start with house/flat number"
+        }
+        break
+      case "city":
+        if (!value.trim()) {
+          error = "City is required"
+        } else if (value.trim().length < 3) {
+          error = "Please enter a valid city name"
+        }
+        break
+      case "pincode":
+        if (!value.trim()) {
+          error = "Pincode is required"
+        } else if (!/^[0-9]{6}$/.test(value)) {
+          error = "Pincode must be 6 digits"
+        } else if (!value.startsWith("39") && !value.startsWith("36") && !value.startsWith("38")) {
+          error = "We currently serve only Gujarat (pincode starting with 36, 38, or 39)"
+        }
+        break
+    }
+
+    setErrors(prev => {
+      const newErrors = { ...prev }
+      if (error) {
+        newErrors[name] = error
+      } else {
+        delete newErrors[name]
+      }
+      return newErrors
+    })
+
+    return error === ""
+  }
 
   // Calculate delivery fee based on selected delivery method
 
@@ -308,7 +418,7 @@ export default function ShippingPage() {
             ...prev,
             fullName: user.name || "",
             email: user.email || "",
-          })
+          }))
         }
       } catch (error) {
         log.error('Failed to load user profile data', error, 'ShippingPage')
@@ -361,32 +471,26 @@ export default function ShippingPage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    if (!shippingData.fullName.trim()) newErrors.fullName = "Full name is required"
-    if (!shippingData.email.trim()) newErrors.email = "Email is required"
-    if (shippingData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingData.email)) {
-      newErrors.email = "Please enter a valid email address"
-    }
-    if (!shippingData.phone.trim()) newErrors.phone = "Phone number is required"
-    if (shippingData.phone.trim() && !/^[0-9]{10}$/.test(shippingData.phone.replace(/\s+/g, ''))) {
-      newErrors.phone = "Phone number must be 10 digits"
-    }
-    if (!shippingData.address.trim()) newErrors.address = "Address is required"
-    if (!shippingData.city.trim()) newErrors.city = "City is required"
-    if (!shippingData.pincode.trim()) {
-      newErrors.pincode = "Pincode is required"
-    } else if (!/^[0-9]{6}$/.test(shippingData.pincode)) {
-      newErrors.pincode = "Pincode must be 6 digits"
-    } else if (!shippingData.pincode.startsWith('39')) {
-      newErrors.pincode = "We currently serve only Gujarat (pincode starting with 39)"
-    }
+    // Use centralized validation for all fields
+    const fieldsToValidate = ["fullName", "email", "phone", "address", "city", "pincode"]
+
+    fieldsToValidate.forEach(field => {
+      if (!validateField(field, shippingData[field as keyof typeof shippingData] as string)) {
+        // Error is already set by validateField
+      }
+    })
 
     // Address verification check - MANDATORY for real address validation
     if (!isAddressVerified && (isNewAddress || savedAddresses.length === 0)) {
-      newErrors.address = "Please verify your address using the 'Verify Address' button to ensure accurate delivery"
+      setErrors(prev => ({
+        ...prev,
+        address: "Please verify your address using the 'Verify Address' button to ensure accurate delivery"
+      }))
+      return false
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    // Return true only if no errors exist
+    return Object.keys(errors).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -538,9 +642,37 @@ export default function ShippingPage() {
   }
 
   const handleInputChange = (field: string, value: string) => {
-    setShippingData((prev) => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }))
+    // Determine input type for sanitization
+    let inputType = "text"
+    if (field === "fullName") inputType = "name"
+    else if (field === "phone") inputType = "phone"
+    else if (field === "pincode") inputType = "pincode"
+    else if (field === "email") inputType = "email"
+    else if (field === "address") inputType = "address"
+
+    // Sanitize input based on field type
+    const sanitizedValue = sanitizeInput(value, inputType)
+
+    setShippingData((prev) => ({ ...prev, [field]: sanitizedValue }))
+
+    // Real-time validation for critical fields
+    if (["fullName", "email", "phone", "address", "city", "pincode"].includes(field)) {
+      // Validate only if user has typed something substantial
+      if (sanitizedValue.length > 0) {
+        validateField(field, sanitizedValue)
+      } else {
+        // Clear error if field is empty (will be caught on form submit)
+        setErrors((prev) => {
+          const newErrors = { ...prev }
+          delete newErrors[field]
+          return newErrors
+        })
+      }
+    }
+
+    // Reset address verification when address changes
+    if (field === "address" && isAddressVerified) {
+      setIsAddressVerified(false)
     }
   }
 
