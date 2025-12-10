@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
 import { useAdminIntegration } from "@/hooks/use-admin-integration"
 import { log } from "@/lib/logger"
+import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 
 interface PaymentState {
   paymentMethod: string
@@ -298,7 +299,7 @@ export default function PaymentPage() {
     setIsLoggedIn(true)
 
     // Load checkout data
-    const savedCheckoutData = localStorage.getItem("radhika_checkout_cart")
+    const savedCheckoutData = safeGetItem("radhika_checkout_cart")
     if (!savedCheckoutData) {
       toast({
         title: "No items found",
@@ -414,7 +415,7 @@ export default function PaymentPage() {
                   tax: checkoutData.tax,
                   shipping: checkoutData.shipping,
                   total: checkoutData.total,
-                  shippingAddress: JSON.parse(localStorage.getItem("radhika_shipping_data") || '{}')
+                  shippingAddress: JSON.parse(safeGetItem("radhika_shipping_data") || '{}')
                 }
               }),
             })
@@ -434,7 +435,7 @@ export default function PaymentPage() {
               })
 
               // Clear checkout data
-              localStorage.removeItem("radhika_checkout_cart")
+              safeSetItem("radhika_checkout_cart", null)
 
               toast({
                 title: "Payment successful!",
@@ -488,8 +489,8 @@ export default function PaymentPage() {
     setUpiProcessing(true)
 
     try {
-      // Get shipping address from localStorage
-      const shippingData = localStorage.getItem("radhika_shipping_data")
+      // Get shipping address from safe storage
+      const shippingData = safeGetItem("radhika_shipping_data")
       if (!shippingData) {
         toast({
           title: "Missing shipping information",
@@ -539,20 +540,20 @@ export default function PaymentPage() {
           orderDate: new Date().toISOString().split("T")[0]
         })
 
-        // Store order data in localStorage for order success page
+        // Store order data with safe storage for order success page (24-hour expiry)
         const orderDataToStore = {
           orderId: result.orderId,
           paymentMethod: 'upi',
           paymentStatus: 'completed',
           ...result.order
         }
-        localStorage.setItem("radhika_current_order", JSON.stringify(orderDataToStore))
+        safeSetItem("radhika_current_order", JSON.stringify(orderDataToStore), 24 * 60 * 60 * 1000)
 
-        // Also store as last order for refresh protection
-        localStorage.setItem("radhika_last_order", JSON.stringify(orderDataToStore))
+        // Also store as last order for refresh protection (7-day expiry)
+        safeSetItem("radhika_last_order", JSON.stringify(orderDataToStore), 7 * 24 * 60 * 60 * 1000)
 
         // Clear checkout data
-        localStorage.removeItem("radhika_checkout_cart")
+        safeSetItem("radhika_checkout_cart", null)
 
         toast({
           title: "Payment successful!",
@@ -582,8 +583,8 @@ export default function PaymentPage() {
     setNetbankingProcessing(true)
 
     try {
-      // Get shipping address from localStorage
-      const shippingData = localStorage.getItem("radhika_shipping_data")
+      // Get shipping address from safe storage
+      const shippingData = safeGetItem("radhika_shipping_data")
       if (!shippingData) {
         toast({
           title: "Missing shipping information",
@@ -633,18 +634,18 @@ export default function PaymentPage() {
           orderDate: new Date().toISOString().split("T")[0]
         })
 
-        // Store order data in localStorage for order success page
+        // Store order data with safe storage for order success page (24-hour expiry)
         const orderDataToStore = {
           orderId: result.orderId,
           paymentMethod: 'netbanking',
           paymentStatus: 'completed',
           ...result.order
         }
-        localStorage.setItem("radhika_current_order", JSON.stringify(orderDataToStore))
-        localStorage.setItem("radhika_last_order", JSON.stringify(orderDataToStore))
+        safeSetItem("radhika_current_order", JSON.stringify(orderDataToStore), 24 * 60 * 60 * 1000)
+        safeSetItem("radhika_last_order", JSON.stringify(orderDataToStore), 7 * 24 * 60 * 60 * 1000)
 
         // Clear checkout data
-        localStorage.removeItem("radhika_checkout_cart")
+        safeSetItem("radhika_checkout_cart", null)
 
         toast({
           title: "Payment successful!",
@@ -674,8 +675,8 @@ export default function PaymentPage() {
     setCardProcessing(true)
 
     try {
-      // Get shipping address from localStorage
-      const shippingData = localStorage.getItem("radhika_shipping_data")
+      // Get shipping address from safe storage
+      const shippingData = safeGetItem("radhika_shipping_data")
       if (!shippingData) {
         toast({
           title: "Missing shipping information",
@@ -725,18 +726,18 @@ export default function PaymentPage() {
           orderDate: new Date().toISOString().split("T")[0]
         })
 
-        // Store order data in localStorage for order success page
+        // Store order data with safe storage for order success page (24-hour expiry)
         const orderDataToStore = {
           orderId: result.orderId,
           paymentMethod: 'card',
           paymentStatus: 'completed',
           ...result.order
         }
-        localStorage.setItem("radhika_current_order", JSON.stringify(orderDataToStore))
-        localStorage.setItem("radhika_last_order", JSON.stringify(orderDataToStore))
+        safeSetItem("radhika_current_order", JSON.stringify(orderDataToStore), 24 * 60 * 60 * 1000)
+        safeSetItem("radhika_last_order", JSON.stringify(orderDataToStore), 7 * 24 * 60 * 60 * 1000)
 
         // Clear checkout data
-        localStorage.removeItem("radhika_checkout_cart")
+        safeSetItem("radhika_checkout_cart", null)
 
         toast({
           title: "Payment successful!",
@@ -766,8 +767,8 @@ export default function PaymentPage() {
     setWalletProcessing(true)
 
     try {
-      // Get shipping address from localStorage
-      const shippingData = localStorage.getItem("radhika_shipping_data")
+      // Get shipping address from safe storage
+      const shippingData = safeGetItem("radhika_shipping_data")
       if (!shippingData) {
         toast({
           title: "Missing shipping information",
@@ -817,18 +818,18 @@ export default function PaymentPage() {
           orderDate: new Date().toISOString().split("T")[0]
         })
 
-        // Store order data in localStorage for order success page
+        // Store order data with safe storage for order success page (24-hour expiry)
         const orderDataToStore = {
           orderId: result.orderId,
           paymentMethod: 'wallet',
           paymentStatus: 'completed',
           ...result.order
         }
-        localStorage.setItem("radhika_current_order", JSON.stringify(orderDataToStore))
-        localStorage.setItem("radhika_last_order", JSON.stringify(orderDataToStore))
+        safeSetItem("radhika_current_order", JSON.stringify(orderDataToStore), 24 * 60 * 60 * 1000)
+        safeSetItem("radhika_last_order", JSON.stringify(orderDataToStore), 7 * 24 * 60 * 60 * 1000)
 
         // Clear checkout data
-        localStorage.removeItem("radhika_checkout_cart")
+        safeSetItem("radhika_checkout_cart", null)
 
         toast({
           title: "Payment successful!",
@@ -858,8 +859,8 @@ export default function PaymentPage() {
     setIsProcessing(true)
 
     try {
-      // Get shipping address from localStorage
-      const shippingData = localStorage.getItem("radhika_shipping_data")
+      // Get shipping address from safe storage
+      const shippingData = safeGetItem("radhika_shipping_data")
       if (!shippingData) {
         toast({
           title: "Missing shipping information",
@@ -898,20 +899,20 @@ export default function PaymentPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Store order data in localStorage for order success page
+        // Store order data with safe storage for order success page (24-hour expiry)
         const orderDataToStore = {
           orderId: result.orderId,
           paymentMethod: 'cod',
           paymentStatus: 'pending',
           ...result.order
         }
-        localStorage.setItem("radhika_current_order", JSON.stringify(orderDataToStore))
+        safeSetItem("radhika_current_order", JSON.stringify(orderDataToStore), 24 * 60 * 60 * 1000)
 
-        // Also store as last order for refresh protection
-        localStorage.setItem("radhika_last_order", JSON.stringify(orderDataToStore))
+        // Also store as last order for refresh protection (7-day expiry)
+        safeSetItem("radhika_last_order", JSON.stringify(orderDataToStore), 7 * 24 * 60 * 60 * 1000)
 
         // Clear checkout data
-        localStorage.removeItem("radhika_checkout_cart")
+        safeSetItem("radhika_checkout_cart", null)
 
         toast({
           title: "Order placed successfully!",

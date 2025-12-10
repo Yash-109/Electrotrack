@@ -19,6 +19,7 @@ import { Truck, CreditCard, AlertCircle, CheckCircle, MapPin } from "lucide-reac
 import { useToast } from "@/hooks/use-toast"
 import { userAuth } from "@/lib/user-auth"
 import { useAdminIntegration } from "@/hooks/use-admin-integration"
+import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 
 interface CartData {
   items: Array<{
@@ -361,8 +362,8 @@ export default function ShippingPage() {
 
     setCurrentUser(user)
 
-    // Load cart data
-    const storedCartData = localStorage.getItem("radhika_checkout_cart")
+    // Load cart data with safe storage
+    const storedCartData = safeGetItem("radhika_checkout_cart")
     if (!storedCartData) {
       toast({
         title: "No cart data found",
@@ -373,8 +374,19 @@ export default function ShippingPage() {
       return
     }
 
-    const parsedCartData: CartData = JSON.parse(storedCartData)
-    setCartData(parsedCartData)
+    try {
+      const parsedCartData: CartData = JSON.parse(storedCartData)
+      setCartData(parsedCartData)
+    } catch (error) {
+      log.error("Failed to parse cart data", error, "ShippingPage")
+      toast({
+        title: "Invalid cart data",
+        description: "Please refresh your cart and try again.",
+        variant: "destructive",
+      })
+      router.push("/cart")
+      return
+    }
 
     // Load user profile and shipping address
     const loadUserProfile = async () => {
@@ -524,7 +536,7 @@ export default function ShippingPage() {
       const orderDate = new Date().toISOString().split("T")[0]
       const orderId = `ORD${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-      // Store order data
+      // Store order data with safe storage (24-hour expiry)
       const orderData = {
         ...shippingData,
         cartData,
@@ -532,10 +544,17 @@ export default function ShippingPage() {
         orderId: orderId,
         customer: currentUser,
       }
-      localStorage.setItem("radhika_current_order", JSON.stringify(orderData))
 
-      // Store shipping data separately for payment page
-      localStorage.setItem("radhika_shipping_data", JSON.stringify(shippingData))
+      const orderStored = safeSetItem("radhika_current_order", JSON.stringify(orderData), 24 * 60 * 60 * 1000)
+      if (!orderStored) {
+        throw new Error("Failed to store order data")
+      }
+
+      // Store shipping data separately for payment page (24-hour expiry)
+      const shippingStored = safeSetItem("radhika_shipping_data", JSON.stringify(shippingData), 24 * 60 * 60 * 1000)
+      if (!shippingStored) {
+        throw new Error("Failed to store shipping data")
+      }
 
       if (shippingData.paymentMethod === "online") {
         // Redirect to payment page
@@ -580,12 +599,12 @@ export default function ShippingPage() {
           const result = await response.json()
 
           if (result.success) {
-            // Update localStorage with the generated orderId
+            // Update order data with generated orderId
             orderData.orderId = result.orderId
-            localStorage.setItem("radhika_current_order", JSON.stringify(orderData))
+            safeSetItem("radhika_current_order", JSON.stringify(orderData), 24 * 60 * 60 * 1000)
 
-            // Also store as last order for refresh protection
-            localStorage.setItem("radhika_last_order", JSON.stringify(orderData))
+            // Also store as last order for refresh protection (7-day expiry)
+            safeSetItem("radhika_last_order", JSON.stringify(orderData), 7 * 24 * 60 * 60 * 1000)
 
             // NOW create transaction in admin system ONLY after successful order
             addOnlineSale({
@@ -610,7 +629,7 @@ export default function ShippingPage() {
             })
 
             // Clear cart only after successful order and redirect
-            localStorage.removeItem("radhika_checkout_cart")
+            safeSetItem("radhika_checkout_cart", null)
             router.push(`/order-success?orderId=${result.orderId}&paymentMethod=cod`)
           } else {
             throw new Error(result.error || 'Failed to save order')
@@ -624,8 +643,8 @@ export default function ShippingPage() {
           })
 
           // Still redirect to success since admin system was updated, but keep order data
-          localStorage.setItem("radhika_last_order", JSON.stringify(orderData))
-          localStorage.removeItem("radhika_checkout_cart")
+          safeSetItem("radhika_last_order", JSON.stringify(orderData), 7 * 24 * 60 * 60 * 1000)
+          safeSetItem("radhika_checkout_cart", null)
           router.push(`/order-success?orderId=${orderData.orderId}&paymentMethod=cod`)
         }
       }
