@@ -28,20 +28,31 @@ export class CartService {
       return 0
     }
 
-    return items.reduce((total, item) => {
-      // Validate item data before calculation
-      if (!item || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
-        log.warn('Invalid cart item data detected', { item }, 'CartService')
-        return total
-      }
+    try {
+      return items.reduce((total, item) => {
+        // Validate item data before calculation
+        if (!item || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
+          log.warn('Invalid cart item data detected', { item }, 'CartService')
+          return total
+        }
 
-      // Ensure non-negative values and skip zero quantities
-      const validPrice = Math.max(0, item.price)
-      const validQuantity = Math.max(0, Math.floor(item.quantity))
+        // Ensure non-negative values and skip zero quantities
+        const validPrice = Math.max(0, item.price)
+        const validQuantity = Math.max(0, Math.floor(item.quantity))
 
-      if (validQuantity === 0 || validPrice === 0) return total
-      return total + (validPrice * validQuantity)
-    }, 0)
+        // Check for unreasonably large values to prevent overflow
+        if (validPrice > 1e10 || validQuantity > 1e6) {
+          log.warn('Cart item has suspicious values', { price: validPrice, quantity: validQuantity }, 'CartService')
+          return total
+        }
+
+        if (validQuantity === 0 || validPrice === 0) return total
+        return total + (validPrice * validQuantity)
+      }, 0)
+    } catch (error) {
+      log.error('Error calculating cart total', error, 'CartService')
+      return 0
+    }
   }
 
   static async saveCart(userEmail: string, items: CartItem[]): Promise<boolean> {
