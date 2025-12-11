@@ -50,17 +50,17 @@ interface PaymentError {
 const PAYMENT_ERRORS = {
   NETWORK_ERROR: {
     code: 'NETWORK_ERROR',
-    message: 'Network error. Please check your connection and try again.',
+    message: 'Unable to connect. Please check your internet connection and try again.',
     recoverable: true
   },
   PAYMENT_FAILED: {
     code: 'PAYMENT_FAILED',
-    message: 'Payment failed. Please try again with a different method.',
+    message: 'Payment could not be processed. Please verify your payment details or try a different method.',
     recoverable: true
   },
   INSUFFICIENT_FUNDS: {
     code: 'INSUFFICIENT_FUNDS',
-    message: 'Insufficient funds. Please check your balance or use a different payment method.',
+    message: 'Insufficient balance. Please add funds to your account or choose another payment method.',
     recoverable: true
   },
   INVALID_CARD: {
@@ -70,12 +70,12 @@ const PAYMENT_ERRORS = {
   },
   SERVER_ERROR: {
     code: 'SERVER_ERROR',
-    message: 'Server error. Please try again later.',
+    message: 'Our servers are currently experiencing issues. Please try again in a few moments.',
     recoverable: true
   },
   TIMEOUT_ERROR: {
     code: 'TIMEOUT_ERROR',
-    message: 'Payment timeout. Please try again.',
+    message: 'Payment took too long to process. Your account has not been charged. Please try again.',
     recoverable: true
   },
   UNKNOWN_ERROR: {
@@ -132,6 +132,10 @@ export default function PaymentPage() {
   const [showNetbankingInterface, setShowNetbankingInterface] = useState(false)
   const [showCardInterface, setShowCardInterface] = useState(false)
   const [showWalletInterface, setShowWalletInterface] = useState(false)
+  const [upiProcessing, setUpiProcessing] = useState(false)
+  const [netbankingProcessing, setNetbankingProcessing] = useState(false)
+  const [cardProcessing, setCardProcessing] = useState(false)
+  const [walletProcessing, setWalletProcessing] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
   const { addOnlineSale } = useAdminIntegration()
@@ -327,6 +331,16 @@ export default function PaymentPage() {
   const processRazorpayPayment = async () => {
     if (!checkoutData || !currentUser) return
 
+    // Validate payment method is selected
+    if (!paymentState.paymentMethod) {
+      toast({
+        title: "Payment method required",
+        description: "Please select a payment method to continue.",
+        variant: "destructive",
+      })
+      return
+    }
+
     // Check if Razorpay script is loaded
     if (!razorpayLoaded || !window.Razorpay) {
       toast({
@@ -337,7 +351,7 @@ export default function PaymentPage() {
       return
     }
 
-    setIsProcessing(true)
+    setPaymentState(prev => ({ ...prev, isProcessing: true }))
 
     try {
       // Create order on our backend with enhanced options
@@ -350,7 +364,7 @@ export default function PaymentPage() {
           amount: checkoutData.total,
           currency: 'INR',
           userId: currentUser.email,
-          preferredMethod: paymentMethod,
+          preferredMethod: paymentState.paymentMethod,
           customerInfo: {
             name: currentUser.name || currentUser.email.split('@')[0],
             email: currentUser.email,
@@ -389,10 +403,10 @@ export default function PaymentPage() {
           color: '#2563eb'
         },
         method: {
-          card: paymentMethod === 'cards',
-          netbanking: paymentMethod === 'netbanking',
-          upi: paymentMethod === 'upi',
-          wallet: paymentMethod === 'wallet',
+          card: paymentState.paymentMethod === 'cards',
+          netbanking: paymentState.paymentMethod === 'netbanking',
+          upi: paymentState.paymentMethod === 'upi',
+          wallet: paymentState.paymentMethod === 'wallet',
           emi: false,
           paylater: false
         },
@@ -439,7 +453,7 @@ export default function PaymentPage() {
 
               toast({
                 title: "Payment successful!",
-                description: `Order ${verifyData.order.orderId} has been placed successfully.`,
+                description: `Order ${verifyData.order.orderId} confirmed. Redirecting to order details...`,
               })
 
               // Redirect to success page with order details
@@ -455,11 +469,11 @@ export default function PaymentPage() {
               variant: "destructive",
             })
           }
-          setIsProcessing(false)
+          setPaymentState(prev => ({ ...prev, isProcessing: false }))
         },
         modal: {
           ondismiss: function () {
-            setIsProcessing(false)
+            setPaymentState(prev => ({ ...prev, isProcessing: false }))
             toast({
               title: "Payment cancelled",
               description: "You cancelled the payment process.",
@@ -479,7 +493,7 @@ export default function PaymentPage() {
         description: error.message,
         variant: "destructive",
       })
-      setIsProcessing(false)
+      setPaymentState(prev => ({ ...prev, isProcessing: false }))
     }
   }
 
@@ -856,7 +870,7 @@ export default function PaymentPage() {
   const processCODOrder = async () => {
     if (!checkoutData || !currentUser) return
 
-    setIsProcessing(true)
+    setPaymentState(prev => ({ ...prev, isProcessing: true }))
 
     try {
       // Get shipping address from safe storage
@@ -932,9 +946,13 @@ export default function PaymentPage() {
         variant: "destructive",
       })
     } finally {
-      setIsProcessing(false)
+      setPaymentState(prev => ({ ...prev, isProcessing: false }))
     }
   }
+
+  const handlePaymentMethodChange = useCallback((value: string) => {
+    setPaymentState(prev => ({ ...prev, paymentMethod: value }))
+  }, [])
 
   const handlePayment = useCallback(async () => {
     if (!checkoutData) {
@@ -966,17 +984,10 @@ export default function PaymentPage() {
     } else if (paymentState.paymentMethod === 'wallet') {
       setShowWalletInterface(true)
     } else {
-      const paymentData = {
-        amount: Math.round(checkoutData.total * 100), // Convert to paise
-        currency: 'INR',
-        receipt: `receipt_${Date.now()}`,
-        items: checkoutData.items,
-        userEmail: currentUser?.email,
-        userId: currentUser?._id,
-      }
-      await processPaymentWithRetry(paymentData)
+      // Fallback to Razorpay
+      await processRazorpayPayment()
     }
-  }, [checkoutData, razorpayLoaded, paymentState.paymentMethod, currentUser, processPaymentWithRetry, toast])
+  }, [checkoutData, razorpayLoaded, paymentState.paymentMethod, currentUser, toast, processCODOrder, processRazorpayPayment])
 
   if (!checkoutData || !isLoggedIn) {
     return (
