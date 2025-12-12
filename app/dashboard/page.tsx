@@ -11,7 +11,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { log } from "@/lib/logger"
 import Image from "next/image"
-import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X, Eye, AlertCircle } from "lucide-react"
+import { ShoppingCart, Star, Search, Filter, Heart, GitCompare, X, Eye, AlertCircle, ThumbsUp, MessageSquare } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
@@ -359,6 +359,12 @@ export default function DashboardPage() {
   const [quickViewProduct, setQuickViewProduct] = useState<typeof products[0] | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
   const [imageLoadingStates, setImageLoadingStates] = useState<Set<number>>(new Set())
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [reviewProduct, setReviewProduct] = useState<typeof products[0] | null>(null)
+  const [productReviews, setProductReviews] = useState<any[]>([])
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' })
+  const [submittingReview, setSubmittingReview] = useState(false)
   const { user: currentUser, isAuthenticated: isLoggedIn, isLoading } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -658,6 +664,111 @@ export default function DashboardPage() {
 
     return Array.from(suggestions).slice(0, 8) // Limit final results
   }, [searchTerm, searchHistory])
+
+  // Fetch reviews for a product
+  const fetchProductReviews = useCallback(async (productId: number) => {
+    setReviewsLoading(true)
+    try {
+      const response = await fetch(`/api/reviews?productId=${productId}&limit=50`)
+      const data = await response.json()
+
+      if (data.success) {
+        setProductReviews(data.reviews)
+      }
+    } catch (error) {
+      log.componentError('Dashboard fetchProductReviews', error)
+    } finally {
+      setReviewsLoading(false)
+    }
+  }, [])
+
+  // Submit a product review
+  const submitReview = useCallback(async () => {
+    if (!isLoggedIn || !currentUser?.email || !reviewProduct) {
+      toast({
+        title: "Login required",
+        description: "Please login to submit a review.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!reviewForm.title || !reviewForm.comment) {
+      toast({
+        title: "Missing information",
+        description: "Please provide both title and comment for your review.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSubmittingReview(true)
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: reviewProduct.id.toString(),
+          userEmail: currentUser.email,
+          userName: currentUser.name || 'Anonymous',
+          rating: reviewForm.rating,
+          title: reviewForm.title,
+          comment: reviewForm.comment
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: "Review submitted!",
+          description: "Thank you for your feedback.",
+        })
+        setShowReviewModal(false)
+        setReviewForm({ rating: 5, title: '', comment: '' })
+        // Refresh reviews
+        fetchProductReviews(reviewProduct.id)
+      } else {
+        toast({
+          title: "Failed to submit review",
+          description: data.error || "Please try again later.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      log.componentError('Dashboard submitReview', error)
+      toast({
+        title: "Failed to submit review",
+        description: "An error occurred. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setSubmittingReview(false)
+    }
+  }, [isLoggedIn, currentUser, reviewProduct, reviewForm, toast, fetchProductReviews])
+
+  // Mark review as helpful
+  const markReviewHelpful = useCallback(async (reviewId: string) => {
+    try {
+      const response = await fetch('/api/reviews', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewId, action: 'helpful' })
+      })
+
+      const data = await response.json()
+
+      if (data.success && reviewProduct) {
+        toast({
+          title: "Thank you!",
+          description: "Your feedback helps others.",
+        })
+        fetchProductReviews(reviewProduct.id)
+      }
+    } catch (error) {
+      log.componentError('Dashboard markReviewHelpful', error)
+    }
+  }, [reviewProduct, toast, fetchProductReviews])
 
   // Debounced search history save function to prevent excessive localStorage writes
   const debouncedSaveSearchHistory = useCallback(() => {
@@ -1032,6 +1143,7 @@ export default function DashboardPage() {
                     onClick={(e) => {
                       e.stopPropagation()
                       setQuickViewProduct(product)
+                      fetchProductReviews(product.id)
                     }}
                     aria-label="Quick view product details"
                   >
@@ -1053,9 +1165,13 @@ export default function DashboardPage() {
 
                 <div className="flex items-center mb-3">
                   <div
-                    className="flex items-center"
-                    role="img"
-                    aria-label={`Rating: ${product.rating} out of 5 stars, ${product.reviews} reviews`}
+                    className="flex items-center cursor-pointer hover:underline"
+                    role="button"
+                    aria-label={`Rating: ${product.rating} out of 5 stars, ${product.reviews} reviews - Click to view reviews`}
+                    onClick={() => {
+                      setQuickViewProduct(product)
+                      fetchProductReviews(product.id)
+                    }}
                   >
                     <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" aria-hidden="true" />
                     <span className="ml-1 text-sm font-medium" aria-hidden="true">{product.rating}</span>
@@ -1304,7 +1420,82 @@ export default function DashboardPage() {
                       </>
                     )}
                   </Button>
+
+                  {/* Write Review Button */}
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2"
+                    onClick={() => {
+                      setReviewProduct(quickViewProduct)
+                      setShowReviewModal(true)
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Write a Review
+                  </Button>
                 </div>
+              </div>
+
+              {/* Reviews Section */}
+              <div className="mt-6 pt-6 border-t">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Customer Reviews</h3>
+                  <div className="flex items-center gap-2">
+                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                    <span className="font-medium">{quickViewProduct.rating}</span>
+                    <span className="text-gray-600">({productReviews.length} reviews)</span>
+                  </div>
+                </div>
+
+                {reviewsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner size="md" />
+                  </div>
+                ) : productReviews.length > 0 ? (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {productReviews.slice(0, 5).map((review: any) => (
+                      <div key={review._id} className="border rounded-lg p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium">{review.userName}</span>
+                              {review.isVerifiedPurchase && (
+                                <Badge variant="secondary" className="text-xs">Verified Purchase</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {Array.from({ length: 5 }).map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`h-3 w-3 ${i < review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <h4 className="font-medium mb-1">{review.title}</h4>
+                        <p className="text-sm text-gray-600 mb-2">{review.comment}</p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => markReviewHelpful(review._id)}
+                          className="text-xs"
+                        >
+                          <ThumbsUp className="h-3 w-3 mr-1" />
+                          Helpful ({review.helpfulCount || 0})
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>No reviews yet. Be the first to review!</p>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -1601,6 +1792,100 @@ export default function DashboardPage() {
               <li>• Consider <strong>availability</strong> and delivery times for your needs</li>
               <li>• Look for <strong>features</strong> that matter most for your use case</li>
             </ul>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Review Submission Modal */}
+      <Dialog open={showReviewModal} onOpenChange={setShowReviewModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Write a Review</DialogTitle>
+            {reviewProduct && (
+              <p className="text-sm text-gray-600 mt-1">{reviewProduct.name}</p>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Rating Selection */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Your Rating</label>
+              <div className="flex gap-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setReviewForm(prev => ({ ...prev, rating: i + 1 }))}
+                    className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                  >
+                    <Star
+                      className={`h-8 w-8 cursor-pointer transition-colors ${i < reviewForm.rating
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300 hover:text-yellow-400'
+                        }`}
+                    />
+                  </button>
+                ))}
+                <span className="ml-2 text-sm text-gray-600 self-center">
+                  {reviewForm.rating} star{reviewForm.rating !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Review Title */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Review Title</label>
+              <Input
+                placeholder="Summarize your experience"
+                value={reviewForm.title}
+                onChange={(e) => setReviewForm(prev => ({ ...prev, title: e.target.value }))}
+                maxLength={100}
+              />
+            </div>
+
+            {/* Review Comment */}
+            <div>
+              <label className="block text-sm font-medium mb-2">Your Review</label>
+              <textarea
+                className="w-full min-h-[120px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Share your thoughts about this product..."
+                value={reviewForm.comment}
+                onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {reviewForm.comment.length}/500 characters
+              </p>
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowReviewModal(false)
+                  setReviewForm({ rating: 5, title: '', comment: '' })
+                }}
+                className="flex-1"
+                disabled={submittingReview}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={submitReview}
+                className="flex-1"
+                disabled={submittingReview || !reviewForm.title || !reviewForm.comment}
+              >
+                {submittingReview ? (
+                  <LoadingSpinner size="sm" variant="inline" text="Submitting..." />
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Submit Review
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
