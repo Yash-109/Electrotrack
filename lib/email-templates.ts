@@ -320,3 +320,61 @@ export function getPromotionalEmailTemplate(userName: string, offerTitle: string
     textBody: `${offerTitle}\n\nHi ${userName},\n\n${offerDescription}\n\nPromo Code: ${discountCode}\n\nShop now: https://radhikaelectronics.com/dashboard\n\n*Terms and conditions apply\n\nRadhika Electronics`
   }
 }
+
+// Low stock alert template for wishlist items
+export function getLowStockAlertTemplate(userName: string, productName: string, stockCount: number, productUrl: string): EmailTemplate {
+  return {
+    subject: `⚠️ Hurry! ${productName} - Only ${stockCount} Left!`,
+    htmlBody: `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f4f4f4;">
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%); padding: 30px 20px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 10px;">⚠️</div>
+            <h1 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 600;">Low Stock Alert!</h1>
+          </div>
+          <div style="padding: 40px 30px;">
+            <p style="color: #333333; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">Hi ${userName},</p>
+            <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0 0 25px 0;">An item on your wishlist is running low! Don't miss your chance to get it before it's gone.</p>
+
+            <div style="background: linear-gradient(135deg, #ffe5e5 0%, #ffd4d4 100%); border-radius: 8px; padding: 25px; margin: 25px 0; border: 2px solid #ff6b6b;">
+              <h3 style="color: #ff6b6b; font-size: 20px; margin: 0 0 15px 0; text-align: center;">📦 ${productName}</h3>
+              <div style="background-color: rgba(255,255,255,0.9); padding: 20px; border-radius: 6px; text-align: center;">
+                <p style="color: #666666; font-size: 14px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px;">Stock Remaining</p>
+                <p style="color: #ff6b6b; font-size: 36px; font-weight: 700; margin: 0; font-family: 'Courier New', monospace;">${stockCount} ${stockCount === 1 ? 'Unit' : 'Units'}</p>
+                <p style="color: #999999; font-size: 13px; margin: 10px 0 0 0;">⏰ Limited availability!</p>
+              </div>
+            </div>
+
+            <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 25px 0; border-radius: 4px;">
+              <p style="color: #856404; font-size: 14px; font-weight: 600; margin: 0 0 10px 0;">⚡ Act Fast!</p>
+              <ul style="color: #856404; font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 5px;">Stock is selling quickly</li>
+                <li style="margin-bottom: 5px;">May not be restocked soon</li>
+                <li>High demand for this item</li>
+              </ul>
+            </div>
+
+            <div style="text-align: center; margin: 35px 0;">
+              <a href="${productUrl}" style="display: inline-block; background-color: #ff6b6b; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 2px 4px rgba(255,107,107,0.3);">Order Now</a>
+            </div>
+
+            <p style="color: #555555; font-size: 15px; line-height: 1.6; margin: 25px 0 0 0; text-align: center;">Don't let this opportunity slip away!</p>
+            <p style="color: #333333; font-size: 15px; font-weight: 600; margin: 10px 0 0 0; text-align: center;">The Radhika Electronics Team</p>
+          </div>
+          <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+            <p style="color: #6c757d; font-size: 13px; margin: 0;">Questions? <a href="https://radhikaelectronics.com/contact" style="color: #007bff; text-decoration: none;">Contact our support team</a></p>
+            <p style="color: #6c757d; font-size: 12px; margin: 10px 0 0 0;">You're receiving this because this item is on your wishlist. <a href="https://radhikaelectronics.com/profile" style="color: #007bff; text-decoration: none;">Manage preferences</a></p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    textBody: `⚠️ Low Stock Alert!\n\nHi ${userName},\n\nAn item on your wishlist is running low!\n\nProduct: ${productName}\nStock Remaining: ${stockCount} ${stockCount === 1 ? 'unit' : 'units'}\n\nOrder now before it's gone: ${productUrl}\n\nDon't miss out!\n\nThe Radhika Electronics Team`
+  }
+}
