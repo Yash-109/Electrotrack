@@ -356,6 +356,7 @@ export default function DashboardPage() {
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [popularSearches, setPopularSearches] = useState<Map<string, number>>(new Map())
   const [quickViewProduct, setQuickViewProduct] = useState<typeof products[0] | null>(null)
   const [showComparisonModal, setShowComparisonModal] = useState(false)
   const [imageLoadingStates, setImageLoadingStates] = useState<Set<number>>(new Set())
@@ -594,6 +595,17 @@ export default function DashboardPage() {
         log.error('Failed to load search history from localStorage', error, 'Dashboard')
       }
     }
+
+    // Load popular searches analytics
+    const savedPopular = localStorage.getItem('electrotrack-popular-searches')
+    if (savedPopular) {
+      try {
+        const popularArray = JSON.parse(savedPopular)
+        setPopularSearches(new Map(popularArray))
+      } catch (error) {
+        log.error('Failed to load popular searches from localStorage', error, 'Dashboard')
+      }
+    }
   }, [])
 
   // Toggle favorite status
@@ -639,7 +651,17 @@ export default function DashboardPage() {
   // Generate search suggestions with better performance
   const searchSuggestions = useMemo(() => {
     if (!searchTerm || searchTerm.length < 1) {
-      return searchHistory.slice(0, 5)
+      // When no search term, show recent history + popular searches
+      const recentSearches = searchHistory.slice(0, 3)
+
+      // Get top popular searches (sorted by frequency)
+      const popularArray = Array.from(popularSearches.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([term]) => term)
+        .filter(term => !recentSearches.includes(term))
+
+      return [...recentSearches, ...popularArray].slice(0, 8)
     }
 
     const searchLower = searchTerm.toLowerCase()
@@ -662,8 +684,14 @@ export default function DashboardPage() {
       )
       .forEach(cat => suggestions.add(cat.label))
 
+    // Add relevant search history
+    searchHistory
+      .filter(term => term.toLowerCase().includes(searchLower))
+      .slice(0, 3)
+      .forEach(term => suggestions.add(term))
+
     return Array.from(suggestions).slice(0, 8) // Limit final results
-  }, [searchTerm, searchHistory])
+  }, [searchTerm, searchHistory, popularSearches])
 
   // Fetch reviews for a product
   const fetchProductReviews = useCallback(async (productId: number) => {
@@ -787,11 +815,37 @@ export default function DashboardPage() {
     setSearchTerm(selectedTerm)
     setShowSearchSuggestions(false)
 
-    // Add to search history
+    // Add to search history (avoid duplicates, keep most recent first)
     const newHistory = [selectedTerm, ...searchHistory.filter(item => item !== selectedTerm)].slice(0, 10)
     setSearchHistory(newHistory)
     debouncedSaveSearchHistory(newHistory)
-  }, [searchHistory])
+
+    // Track popular searches for analytics
+    setPopularSearches(prev => {
+      const newPopular = new Map(prev)
+      const currentCount = newPopular.get(selectedTerm) || 0
+      newPopular.set(selectedTerm, currentCount + 1)
+
+      // Save to localStorage
+      try {
+        localStorage.setItem('electrotrack-popular-searches', JSON.stringify(Array.from(newPopular.entries())))
+      } catch (error) {
+        log.error('Failed to save popular searches', error, 'Dashboard')
+      }
+
+      return newPopular
+    })
+  }, [searchHistory, debouncedSaveSearchHistory])
+
+  // Clear search history
+  const clearSearchHistory = useCallback(() => {
+    setSearchHistory([])
+    localStorage.removeItem('electrotrack-search-history')
+    toast({
+      title: "Search history cleared",
+      description: "Your search history has been removed.",
+    })
+  }, [toast])
 
   // Debounced search effect with proper cleanup
   useEffect(() => {
@@ -934,13 +988,28 @@ export default function DashboardPage() {
                     }
                   }
                 }}
-                className="pl-10"
+                className="pl-10 pr-10"
                 aria-label="Search products by name, category, or description"
                 aria-expanded={showSearchSuggestions && searchSuggestions.length > 0}
                 aria-haspopup="listbox"
                 aria-autocomplete="list"
                 role="combobox"
               />
+
+              {/* Clear search button */}
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('')
+                    setShowSearchSuggestions(false)
+                  }}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
 
               {/* Search Suggestions Dropdown */}
               {showSearchSuggestions && searchSuggestions.length > 0 && (
@@ -950,43 +1019,67 @@ export default function DashboardPage() {
                   role="listbox"
                   aria-label="Search suggestions"
                 >
-                  {searchTerm.length === 0 && searchHistory.length > 0 && (
-                    <div className="px-3 py-2 text-xs text-gray-500 border-b" role="presentation">Recent Searches</div>
+                  {searchTerm.length === 0 && (
+                    <div className="px-3 py-2 text-xs font-medium text-gray-500 border-b flex items-center justify-between" role="presentation">
+                      <span>Recent & Popular Searches</span>
+                      {searchHistory.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={clearSearchHistory}
+                          className="text-blue-600 hover:text-blue-800 text-xs font-normal underline"
+                          aria-label="Clear search history"
+                        >
+                          Clear History
+                        </button>
+                      )}
+                    </div>
                   )}
-                  {searchSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 ${index === selectedSuggestionIndex
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'hover:bg-gray-50 focus:bg-gray-50'
-                        }`}
-                      onClick={() => {
-                        handleSearchSelect(suggestion)
-                        setSelectedSuggestionIndex(-1)
-                      }}
-                      role="option"
-                      aria-selected={index === selectedSuggestionIndex}
-                      tabIndex={showSearchSuggestions ? 0 : -1}
-                      data-suggestion-index={index}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Search className="h-3 w-3 text-gray-400" />
-                        <span className="text-sm">
-                          {searchTerm && suggestion.toLowerCase().includes(searchTerm.toLowerCase()) ? (
-                            <>
-                              {suggestion.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, i) =>
-                                part.toLowerCase() === searchTerm.toLowerCase() ?
-                                  <mark key={i} className="bg-yellow-200">{part}</mark> : part
+                  {searchSuggestions.map((suggestion, index) => {
+                    const isRecent = searchHistory.includes(suggestion)
+                    const isPopular = popularSearches.has(suggestion) && !isRecent
+
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        className={`w-full text-left px-3 py-2 border-b border-gray-100 last:border-b-0 ${index === selectedSuggestionIndex
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'hover:bg-gray-50 focus:bg-gray-50'
+                          }`}
+                        onClick={() => {
+                          handleSearchSelect(suggestion)
+                          setSelectedSuggestionIndex(-1)
+                        }}
+                        role="option"
+                        aria-selected={index === selectedSuggestionIndex}
+                        tabIndex={showSearchSuggestions ? 0 : -1}
+                        data-suggestion-index={index}
+                      >
+                        <div className="flex items-center gap-2 justify-between">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <Search className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm truncate">
+                              {searchTerm && suggestion.toLowerCase().includes(searchTerm.toLowerCase()) ? (
+                                <>
+                                  {suggestion.split(new RegExp(`(${searchTerm})`, 'gi')).map((part, i) =>
+                                    part.toLowerCase() === searchTerm.toLowerCase() ?
+                                      <mark key={i} className="bg-yellow-200">{part}</mark> : part
+                                  )}
+                                </>
+                              ) : (
+                                suggestion
                               )}
-                            </>
-                          ) : (
-                            suggestion
+                            </span>
+                          </div>
+                          {searchTerm.length === 0 && (
+                            <span className="text-xs text-gray-400 flex-shrink-0">
+                              {isRecent ? '↺' : isPopular ? '🔥' : ''}
+                            </span>
                           )}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </form>
@@ -1820,8 +1913,8 @@ export default function DashboardPage() {
                   >
                     <Star
                       className={`h-8 w-8 cursor-pointer transition-colors ${i < reviewForm.rating
-                          ? 'fill-yellow-400 text-yellow-400'
-                          : 'text-gray-300 hover:text-yellow-400'
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'text-gray-300 hover:text-yellow-400'
                         }`}
                     />
                   </button>
