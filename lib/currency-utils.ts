@@ -39,41 +39,47 @@ export function formatCurrencyCompact(amount: number | string): string {
 
     return `${sign}₹${absNum.toFixed(2)}`
 }
-// Handle null, undefined, empty string
-if (amount === null || amount === undefined || amount === '') return '₹0.00'
 
-// Convert to number and ensure it's valid
-const num = parseFloat(amount.toString())
-if (!isFinite(num) || isNaN(num)) return '₹0.00'
+/**
+ * Format currency with proper error handling and thousands separator
+ * Primary function for currency formatting in the application
+ */
+export function formatCurrency(amount: number | string, useCache = true): string {
+    // Handle null, undefined, empty string
+    if (amount === null || amount === undefined || amount === '') return '₹0.00'
 
-// Handle very large numbers to prevent overflow
-if (Math.abs(num) > Number.MAX_SAFE_INTEGER) {
-    log.warn('Currency amount exceeds safe integer range', { amount: num }, 'CurrencyUtils')
-    return '₹0.00'
-}
+    // Convert to number and ensure it's valid
+    const num = parseFloat(amount.toString())
+    if (!isFinite(num) || isNaN(num)) return '₹0.00'
 
-// Check cache first for performance
-const cacheKey = `${num}_currency`
-if (useCache && formatCache.has(cacheKey)) {
-    return formatCache.get(cacheKey)!
-}
+    // Handle very large numbers to prevent overflow
+    if (Math.abs(num) > Number.MAX_SAFE_INTEGER) {
+        log.warn('Currency amount exceeds safe integer range', { amount: num }, 'CurrencyUtils')
+        return '₹0.00'
+    }
 
-// Format with 2 decimal places
-const formatted = num.toFixed(2)
-const parts = formatted.split('.')
+    // Check cache first for performance
+    const cacheKey = `${num}_currency`
+    if (useCache && formatCache.has(cacheKey)) {
+        return formatCache.get(cacheKey)!
+    }
 
-// Add thousands separator manually
-parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+    // Format with 2 decimal places
+    const formatted = num.toFixed(2)
+    const parts = formatted.split('.')
 
-const result = `₹${parts.join('.')}`
+    // Add thousands separator manually
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
-// Cache the result
-if (useCache) {
-    manageCacheSize()
-    formatCache.set(cacheKey, result)
-}
+    const result = `₹${parts.join('.')}`
 
-return result
+    // Cache the result
+    if (useCache) {
+        manageCacheSize()
+        formatCache.set(cacheKey, result)
+    }
+
+    return result
 }
 
 /**
