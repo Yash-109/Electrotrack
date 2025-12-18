@@ -150,7 +150,7 @@ To test the functionality:
 3. Check that helpfulCount increases
 4. Click "helpful" again to toggle off
 5. Check that helpfulCount decreases
-6. Vote "unhelpful" 
+6. Vote "unhelpful"
 7. Check that unhelpfulCount increases and you can't vote helpful simultaneously
 8. Verify votes persist across page refreshes
 
