@@ -125,6 +125,7 @@ export async function POST(request: NextRequest) {
       isVerifiedPurchase,
       isApproved: true, // Auto-approve for now
       helpfulCount: 0,
+      unhelpfulCount: 0,
       createdAt: new Date(),
       updatedAt: new Date()
     }
@@ -152,11 +153,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Mark review as helpful
+// Mark review as helpful or unhelpful
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { reviewId, action } = body
+    const { reviewId, action, userEmail } = body
 
     if (!reviewId || !action) {
       return NextResponse.json({ error: 'Review ID and action are required' }, { status: 400 })
@@ -164,15 +165,69 @@ export async function PUT(request: NextRequest) {
 
     const db = await getDb()
     const reviews = db.collection('reviews')
+    const reviewVotes = db.collection('review_votes')
 
     let updateOperation = {}
 
-    if (action === 'helpful') {
-      updateOperation = { $inc: { helpfulCount: 1 } }
+    // Handle helpful/unhelpful votes with duplicate prevention
+    if (action === 'helpful' || action === 'unhelpful') {
+      if (!userEmail) {
+        return NextResponse.json({ error: 'User email required for voting' }, { status: 400 })
+      }
+
+      // Check if user already voted on this review
+      const existingVote = await reviewVotes.findOne({
+        reviewId,
+        userEmail
+      })
+
+      if (existingVote) {
+        // User already voted
+        if (existingVote.voteType === action) {
+          // Same vote - remove it (toggle off)
+          await reviewVotes.deleteOne({ reviewId, userEmail })
+
+          updateOperation = action === 'helpful'
+            ? { $inc: { helpfulCount: -1 } }
+            : { $inc: { unhelpfulCount: -1 } }
+        } else {
+          // Different vote - update it
+          await reviewVotes.updateOne(
+            { reviewId, userEmail },
+            { $set: { voteType: action, updatedAt: new Date() } }
+          )
+
+          // Adjust both counters
+          if (action === 'helpful') {
+            updateOperation = {
+              $inc: { helpfulCount: 1, unhelpfulCount: -1 }
+            }
+          } else {
+            updateOperation = {
+              $inc: { helpfulCount: -1, unhelpfulCount: 1 }
+            }
+          }
+        }
+      } else {
+        // New vote
+        await reviewVotes.insertOne({
+          reviewId,
+          userEmail,
+          voteType: action,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+
+        updateOperation = action === 'helpful'
+          ? { $inc: { helpfulCount: 1 } }
+          : { $inc: { unhelpfulCount: 1 } }
+      }
     } else if (action === 'approve') {
       updateOperation = { $set: { isApproved: true, updatedAt: new Date() } }
     } else if (action === 'reject') {
       updateOperation = { $set: { isApproved: false, updatedAt: new Date() } }
+    } else {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
     }
 
     const result = await reviews.updateOne(
@@ -184,9 +239,14 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Review not found' }, { status: 404 })
     }
 
+    // Get updated vote counts
+    const updatedReview = await reviews.findOne({ _id: reviewId })
+
     return NextResponse.json({
       success: true,
-      message: 'Review updated successfully'
+      message: 'Review updated successfully',
+      helpfulCount: updatedReview?.helpfulCount || 0,
+      unhelpfulCount: updatedReview?.unhelpfulCount || 0
     })
 
   } catch (error) {
