@@ -29,7 +29,10 @@ import {
     Building,
     Phone,
     Mail,
-    Star
+    Star,
+    ArrowUpDown,
+    ArrowUp,
+    ArrowDown
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { InvoiceGenerator, orderToInvoiceData } from "@/lib/invoice-generator"
@@ -43,18 +46,52 @@ interface OrderTrackingProps {
     const [trackingDialogOpen, setTrackingDialogOpen] = useState(false)
     const [filterStatus, setFilterStatus] = useState<string>("all")
     const [searchQuery, setSearchQuery] = useState("")
+    const [sortBy, setSortBy] = useState<string>("date-desc")
     const [deletingOrder, setDeletingOrder] = useState<string | null>(null)
     const [cancelingOrder, setCancelingOrder] = useState<string | null>(null)
     const [reorderingOrder, setReorderingOrder] = useState<string | null>(null)
     const { toast } = useToast()
 
+    // Sort orders based on selected criteria
+    const sortOrders = (ordersToSort: any[]) => {
+        const sorted = [...ordersToSort]
+
+        switch (sortBy) {
+            case "date-desc":
+                return sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            case "date-asc":
+                return sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+            case "amount-desc":
+                return sorted.sort((a, b) => b.total - a.total)
+            case "amount-asc":
+                return sorted.sort((a, b) => a.total - b.total)
+            case "status":
+                // Sort by status priority: processing > shipped > delivered > cancelled
+                const statusPriority: { [key: string]: number } = {
+                    processing: 1,
+                    shipped: 2,
+                    delivered: 3,
+                    cancelled: 4
+                }
+                return sorted.sort((a, b) => {
+                    const aPriority = statusPriority[a.status.toLowerCase()] || 5
+                    const bPriority = statusPriority[b.status.toLowerCase()] || 5
+                    return aPriority - bPriority
+                })
+            default:
+                return sorted
+        }
+    }
+
     // Filter and search orders
-    const filteredOrders = orders.filter(order => {
-        const matchesSearch = order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.items.some((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
-        const matchesFilter = filterStatus === "all" || order.status.toLowerCase() === filterStatus.toLowerCase()
-        return matchesSearch && matchesFilter
-    })
+    const filteredOrders = sortOrders(
+        orders.filter(order => {
+            const matchesSearch = order.orderId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                order.items.some((item: any) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
+            const matchesFilter = filterStatus === "all" || order.status.toLowerCase() === filterStatus.toLowerCase()
+            return matchesSearch && matchesFilter
+        })
+    )
 
     const getStatusIcon = (status: string) => {
         switch (status.toLowerCase()) {
@@ -332,8 +369,8 @@ interface OrderTrackingProps {
         <div className="space-y-6">
             {/* Header Controls */}
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                    <div className="relative flex-1 max-w-md">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 w-full">
+                    <div className="relative flex-1 max-w-md w-full">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <Input
                             placeholder="Search orders by ID or product name..."
@@ -342,25 +379,66 @@ interface OrderTrackingProps {
                             className="pl-10"
                         />
                     </div>
-                    <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-3 py-2 border rounded-md bg-background"
-                    >
-                        <option value="all">All Orders</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="px-3 py-2 border rounded-md bg-background flex-1 sm:flex-none"
+                            aria-label="Filter by status"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="px-3 py-2 border rounded-md bg-background flex-1 sm:flex-none"
+                            aria-label="Sort orders"
+                        >
+                            <option value="date-desc">📅 Newest First</option>
+                            <option value="date-asc">📅 Oldest First</option>
+                            <option value="amount-desc">💰 Highest Amount</option>
+                            <option value="amount-asc">💰 Lowest Amount</option>
+                            <option value="status">🔄 By Status</option>
+                        </select>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={onRefresh}>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" onClick={onRefresh} className="flex-1 sm:flex-none">
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
                     </Button>
                 </div>
             </div>
+
+            {/* Results Summary */}
+            {(searchQuery || filterStatus !== "all" || sortBy !== "date-desc") && (
+                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 text-sm text-blue-900">
+                        <Filter className="h-4 w-4" />
+                        <span>
+                            Showing {filteredOrders.length} of {orders.length} orders
+                            {filterStatus !== "all" && ` • Status: ${filterStatus}`}
+                            {searchQuery && ` • Search: "${searchQuery}"`}
+                        </span>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                            setSearchQuery("")
+                            setFilterStatus("all")
+                            setSortBy("date-desc")
+                        }}
+                        className="text-blue-700 hover:text-blue-900 hover:bg-blue-100"
+                    >
+                        Clear All
+                    </Button>
+                </div>
+            )}
 
             {/* Orders List */}
             <div className="space-y-4">
