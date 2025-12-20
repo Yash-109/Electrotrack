@@ -154,7 +154,17 @@ export default function CartPage() {
   }, [session, status])
 
   const updateQuantity = async (id: number, newQuantity: number) => {
-    if (newQuantity < 1) return
+    // Validate quantity range (1-99)
+    if (newQuantity < 1 || newQuantity > 99) {
+      if (newQuantity > 99) {
+        toast({
+          title: "Maximum quantity exceeded",
+          description: "You can add a maximum of 99 items per product.",
+          variant: "destructive",
+        })
+      }
+      return
+    }
 
     if (!session?.user?.email) {
       toast({
@@ -188,30 +198,20 @@ export default function CartPage() {
         category: item.category
       }))
 
-      try {
-        await CartService.saveCart(session.user.email, serviceItems)
-        // Dispatch cart updated event for header to update count
-        window.dispatchEvent(new CustomEvent('cartUpdated'))
-      } catch (error) {
-        log.error('Failed to update cart in service', error, 'CartPage')
-        // Revert local changes on error
-        setCartItems(cartItems)
-        toast({
-          title: "Update failed",
-          description: "Failed to update cart. Please try again.",
-          variant: "destructive"
-        })
-      } finally {
-        // Remove loading state
-        setUpdatingItems(prev => {
-          const newSet = new Set(prev)
-          newSet.delete(id)
-          return newSet
-        })
-      }
+      await CartService.saveCart(session.user.email, serviceItems)
+      // Dispatch cart updated event for header to update count
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
     } catch (error) {
-      log.error('Cart update operation failed', error, 'CartPage')
+      log.error('Failed to update cart in service', error, 'CartPage')
+      // Revert local changes on error
+      setCartItems(cartItems)
+      toast({
+        title: "Update failed",
+        description: "Failed to update cart. Please try again.",
+        variant: "destructive"
+      })
     } finally {
+      // Remove loading state
       setUpdatingItems(prev => {
         const newSet = new Set(prev)
         newSet.delete(id)
@@ -390,9 +390,13 @@ export default function CartPage() {
                       <Input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => updateQuantity(item.id, Number.parseInt(e.target.value) || 1)}
+                        onChange={(e) => {
+                          const value = Number.parseInt(e.target.value) || 1
+                          updateQuantity(item.id, Math.min(Math.max(value, 1), 99))
+                        }}
                         className="w-16 text-center"
                         min="1"
+                        max="99"
                         disabled={updatingItems.has(item.id) || removingItems.has(item.id)}
                       />
 
