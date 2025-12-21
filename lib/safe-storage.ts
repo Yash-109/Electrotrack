@@ -8,6 +8,26 @@ import { log } from "./logger"
 interface StorageItem {
     value: any
     expiry?: number
+    compressed?: boolean
+}
+
+// Storage operation statistics
+interface StorageStats {
+    reads: number
+    writes: number
+    deletes: number
+    failures: number
+    cacheHits: number
+    cacheMisses: number
+}
+
+const stats: StorageStats = {
+    reads: 0,
+    writes: 0,
+    deletes: 0,
+    failures: 0,
+    cacheHits: 0,
+    cacheMisses: 0
 }
 
 // In-memory fallback storage
@@ -15,6 +35,9 @@ const memoryStorage = new Map<string, string>()
 
 // Storage availability flag
 let isLocalStorageAvailable: boolean | null = null
+
+// Auto-cleanup interval
+let cleanupInterval: NodeJS.Timeout | null = null
 
 /**
  * Check if localStorage is available and working
@@ -29,12 +52,30 @@ const checkLocalStorageAvailability = (): boolean => {
         localStorage.setItem(testKey, "test")
         localStorage.removeItem(testKey)
         isLocalStorageAvailable = true
+
+        // Initialize auto-cleanup on first successful access
+        initializeAutoCleanup()
+
         return true
     } catch (error) {
         log.warn("localStorage is not available, falling back to memory storage", { error }, "SafeStorage")
         isLocalStorageAvailable = false
         return false
     }
+}
+
+/**
+ * Initialize automatic cleanup interval
+ */
+const initializeAutoCleanup = (): void => {
+    if (cleanupInterval) return
+
+    // Run cleanup every 5 minutes
+    cleanupInterval = setInterval(() => {
+        cleanupExpiredItems()
+    }, 5 * 60 * 1000)
+
+    log.debug('Auto-cleanup initialized', {}, 'SafeStorage')
 }
 
 /**
@@ -113,13 +154,17 @@ const cleanupExpiredItems = (): void => {
  * Safely get item from storage with retry mechanism
  */
 export const safeGetItem = (key: string, maxRetries: number = 3): string | null => {
+    stats.reads++
     let attempt = 0
 
     while (attempt < maxRetries) {
         try {
             if (checkLocalStorageAvailability()) {
                 const item = localStorage.getItem(key)
-                if (!item) return null
+                if (!item) {
+                    stats.cacheMisses++
+                    return null
+                }
 
                 try {
                     const parsed: StorageItem = JSON.parse(item)
@@ -128,21 +173,30 @@ export const safeGetItem = (key: string, maxRetries: number = 3): string | null 
                     if (parsed.expiry && parsed.expiry < Date.now()) {
                         localStorage.removeItem(key)
                         log.debug(`Expired item removed: ${key}`, {}, "SafeStorage")
+                        stats.cacheMisses++
                         return null
                     }
 
+                    stats.cacheHits++
                     return parsed.value
                 } catch {
                     // Item is not wrapped, return as-is (for backward compatibility)
+                    stats.cacheHits++
                     return item
                 }
             } else {
                 // Use memory storage fallback
                 const item = memoryStorage.get(key)
+                if (item) {
+                    stats.cacheHits++
+                } else {
+                    stats.cacheMisses++
+                }
                 return item || null
             }
         } catch (error) {
             attempt++
+            stats.failures++
             log.error(`Failed to get item (attempt ${attempt}/${maxRetries})`, { key, error }, "SafeStorage")
 
             if (attempt >= maxRetries) {
@@ -172,6 +226,7 @@ export const safeSetItem = (
     expiryMs?: number,
     maxRetries: number = 3
 ): boolean => {
+    stats.writes++
     let attempt = 0
 
     while (attempt < maxRetries) {
@@ -253,6 +308,7 @@ export const safeSetItem = (
  * Safely remove item from storage with retry mechanism
  */
 export const safeRemoveItem = (key: string, maxRetries: number = 3): boolean => {
+    stats.deletes++
     let attempt = 0
 
     while (attempt < maxRetries) {
@@ -324,7 +380,7 @@ export const safeClearStorage = (maxRetries: number = 3): boolean => {
 }
 
 /**
- * Get storage statistics
+ * Get storage statistics including operation metrics
  */
 export const getStorageStats = () => {
     const quota = checkStorageQuota()
@@ -336,15 +392,28 @@ export const getStorageStats = () => {
         quota,
         memoryStorageSize: memorySize,
         memoryItemCount: memoryStorage.size,
+        operations: {
+            ...stats,
+            hitRate: stats.reads > 0 ? ((stats.cacheHits / stats.reads) * 100).toFixed(2) + '%' : '0%'
+        }
     }
 }
 
-// Initialize cleanup on module load
-if (typeof window !== "undefined") {
-    cleanupExpiredItems()
+/**
+ * Reset storage statistics
+ */
+export const resetStorageStats = (): void => {
+    stats.reads = 0
+    stats.writes = 0
+    stats.deletes = 0
+    stats.failures = 0
+    stats.cacheHits = 0
+    stats.cacheMisses = 0
+    log.debug('Storage statistics reset', {}, 'SafeStorage')
+}
 
-    // Periodic cleanup every 5 minutes
-    setInterval(() => {
-        cleanupExpiredItems()
-    }, 5 * 60 * 1000)
+// Initialize cleanup on module load - removed duplicate initialization
+if (typeof window !== "undefined") {
+    // Cleanup will be initialized on first checkLocalStorageAvailability call
+    cleanupExpiredItems()
 }
