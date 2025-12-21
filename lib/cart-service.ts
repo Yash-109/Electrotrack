@@ -23,6 +23,33 @@ export class CartService {
   // In-memory fallback storage for development
   private static fallbackStorage: Map<string, CartItem[]> = new Map()
 
+  /**
+   * Validate a single cart item
+   * @returns true if item is valid, false otherwise
+   */
+  static isValidCartItem(item: CartItem): boolean {
+    if (!item || typeof item !== 'object') return false
+    if (typeof item.id !== 'string' || !item.id.trim()) return false
+    if (typeof item.name !== 'string' || !item.name.trim()) return false
+    if (typeof item.price !== 'number' || item.price < 0 || !isFinite(item.price)) return false
+    if (typeof item.quantity !== 'number' || item.quantity <= 0 || !isFinite(item.quantity)) return false
+    return true
+  }
+
+  /**
+   * Filter and return only valid cart items
+   */
+  static sanitizeCartItems(items: CartItem[]): CartItem[] {
+    if (!Array.isArray(items)) return []
+    return items.filter(item => {
+      const isValid = this.isValidCartItem(item)
+      if (!isValid) {
+        log.warn('Invalid cart item removed', { item }, 'CartService')
+      }
+      return isValid
+    })
+  }
+
   static calculateTotal(items: CartItem[]): number {
     if (!Array.isArray(items) || items.length === 0) {
       return 0
@@ -62,7 +89,7 @@ export class CartService {
       return false
     }
 
-    const safeItems = Array.isArray(items) ? items : []
+    const safeItems = this.sanitizeCartItems(items)
     const totalAmount = this.calculateTotal(safeItems)
 
     // If offline, persist to fallback immediately without network attempt
@@ -128,15 +155,23 @@ export class CartService {
 
       if (response.ok) {
         const data = await response.json()
-        return data.items || []
+        const items = data.items || []
+        // Sanitize items from server to ensure data integrity
+        const validItems = this.sanitizeCartItems(items)
+        if (validItems.length !== items.length) {
+          log.warn('Some invalid items removed from cart', {
+            original: items.length,
+            valid: validItems.length
+          }, 'CartService')
+        }
+        return validItems
       }
 
       // Fallback to in-memory storage
       const fallbackItems = this.fallbackStorage.get(userEmail)
       if (fallbackItems) {
-        // eslint-disable-next-line no-console
-        console.warn('Using fallback cart data for user:', userEmail)
-        return fallbackItems
+        log.warn('Using fallback cart data for user', { userEmail }, 'CartService')
+        return this.sanitizeCartItems(fallbackItems)
       }
 
       return []
@@ -147,7 +182,7 @@ export class CartService {
       const fallbackItems = this.fallbackStorage.get(userEmail)
       if (fallbackItems) {
         log.warn('Using fallback cart data due to error for user', { userEmail }, 'CartService')
-        return fallbackItems
+        return this.sanitizeCartItems(fallbackItems)
       }
 
       return []
