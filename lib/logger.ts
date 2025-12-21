@@ -22,8 +22,17 @@ class Logger {
     private static instance: Logger
     private isDevelopment = process.env.NODE_ENV === 'development'
     private logLevel = this.isDevelopment ? LogLevel.DEBUG : LogLevel.INFO
+    private logHistory: LogEntry[] = []
+    private maxHistorySize = 100
+    private batchedLogs: LogEntry[] = []
+    private batchFlushInterval: NodeJS.Timeout | null = null
 
-    private constructor() { }
+    private constructor() {
+        // Auto-flush batched logs every 5 seconds in production
+        if (!this.isDevelopment && typeof setInterval !== 'undefined') {
+            this.batchFlushInterval = setInterval(() => this.flushBatchedLogs(), 5000)
+        }
+    }
 
     static getInstance(): Logger {
         if (!Logger.instance) {
@@ -45,13 +54,60 @@ class Logger {
     }
 
     private createLogEntry(level: LogLevel, message: string, data?: unknown, context?: string): LogEntry {
-        return {
+        const entry = {
             level,
             message,
             data,
             context,
             timestamp: new Date().toISOString(),
         }
+
+        // Store in history for debugging
+        this.logHistory.push(entry)
+        if (this.logHistory.length > this.maxHistorySize) {
+            this.logHistory.shift()
+        }
+
+        return entry
+    }
+
+    /**
+     * Get recent log history for debugging
+     */
+    getLogHistory(count = 50): LogEntry[] {
+        return this.logHistory.slice(-count)
+    }
+
+    /**
+     * Clear log history
+     */
+    clearLogHistory(): void {
+        this.logHistory = []
+    }
+
+    /**
+     * Add log to batch (for production performance)
+     */
+    private addToBatch(entry: LogEntry): void {
+        if (!this.isDevelopment) {
+            this.batchedLogs.push(entry)
+            if (this.batchedLogs.length >= 10) {
+                this.flushBatchedLogs()
+            }
+        }
+    }
+
+    /**
+     * Flush batched logs to console
+     */
+    private flushBatchedLogs(): void {
+        if (this.batchedLogs.length === 0) return
+
+        console.log(`[Batched Logs: ${this.batchedLogs.length} entries]`)
+        this.batchedLogs.forEach(entry => {
+            console.log(this.formatLog(entry))
+        })
+        this.batchedLogs = []
     }
 
     debug(message: string, data?: unknown, context?: string): void {
@@ -67,7 +123,13 @@ class Logger {
         if (!this.shouldLog(LogLevel.INFO)) return
 
         const entry = this.createLogEntry(LogLevel.INFO, message, data, context)
-        console.log(this.formatLog(entry), data || '')
+
+        if (this.isDevelopment) {
+            console.log(this.formatLog(entry), data || '')
+        } else {
+            // Use batching in production for better performance
+            this.addToBatch(entry)
+        }
     }
 
     warn(message: string, data?: unknown, context?: string): void {
@@ -148,6 +210,30 @@ class Logger {
             }
         }
     }
+
+    /**
+     * Export logs as JSON for debugging or analysis
+     */
+    exportLogs(): string {
+        return JSON.stringify(this.logHistory, null, 2)
+    }
+
+    /**
+     * Get log statistics
+     */
+    getLogStats(): { total: number; byLevel: Record<string, number> } {
+        const stats = {
+            total: this.logHistory.length,
+            byLevel: {} as Record<string, number>
+        }
+
+        this.logHistory.forEach(entry => {
+            const levelName = LogLevel[entry.level]
+            stats.byLevel[levelName] = (stats.byLevel[levelName] || 0) + 1
+        })
+
+        return stats
+    }
 }
 
 // Export singleton instance
@@ -165,4 +251,9 @@ export const log = {
     securityEvent: (eventType: 'login_attempt' | 'unauthorized_access' | 'suspicious_activity' | 'rate_limit_exceeded', details: unknown) => logger.securityEvent(eventType, details),
     dbOperation: (operation: string, collection: string, duration?: number, error?: Error) => logger.dbOperation(operation, collection, duration, error),
     resourceMetrics: (metrics: { memoryUsage?: number; cpuUsage?: number; activeConnections?: number }) => logger.resourceMetrics(metrics),
+    // New utility methods
+    getHistory: (count?: number) => logger.getLogHistory(count),
+    clearHistory: () => logger.clearLogHistory(),
+    exportLogs: () => logger.exportLogs(),
+    getStats: () => logger.getLogStats(),
 }
