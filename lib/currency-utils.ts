@@ -8,14 +8,65 @@ import { log } from './logger'
 // Cache for formatted values to improve performance
 const formatCache = new Map<string, string>()
 const CACHE_SIZE_LIMIT = 1000
+let cacheHits = 0
+let cacheMisses = 0
+
+/**
+ * Validate if a value is a valid currency amount
+ */
+export function isValidCurrencyAmount(amount: any): boolean {
+    if (amount === null || amount === undefined || amount === '') return false
+
+    const num = typeof amount === 'number' ? amount : parseFloat(amount.toString())
+
+    if (!isFinite(num) || isNaN(num)) return false
+    if (num < 0) return false // No negative currency
+    if (Math.abs(num) > Number.MAX_SAFE_INTEGER) return false
+
+    return true
+}
+
+/**
+ * Safely parse any value to a valid currency number
+ * Returns 0 for invalid inputs
+ */
+export function safeParseCurrency(value: any): number {
+    if (value === null || value === undefined) return 0
+
+    // If already a valid number
+    if (typeof value === 'number') {
+        return isValidCurrencyAmount(value) ? value : 0
+    }
+
+    // If string, try to parse
+    if (typeof value === 'string') {
+        const cleaned = value.replace(/[₹,\s]/g, '')
+        const num = parseFloat(cleaned)
+        return isValidCurrencyAmount(num) ? num : 0
+    }
+
+    return 0
+}
 
 // Clear cache when it gets too large
 function manageCacheSize() {
     if (formatCache.size > CACHE_SIZE_LIMIT) {
         const keysToDelete = Array.from(formatCache.keys()).slice(0, CACHE_SIZE_LIMIT / 2)
         keysToDelete.forEach(key => formatCache.delete(key))
-        log.debug('Currency format cache cleared', { remainingEntries: formatCache.size }, 'CurrencyUtils')
+        log.debug('Currency format cache cleared', {
+            remainingEntries: formatCache.size,
+            hitRate: calculateCacheHitRate()
+        }, 'CurrencyUtils')
     }
+}
+
+/**
+ * Calculate cache hit rate for monitoring
+ */
+function calculateCacheHitRate(): string {
+    const total = cacheHits + cacheMisses
+    if (total === 0) return '0%'
+    return `${((cacheHits / total) * 100).toFixed(1)}%`
 }
 
 /**
@@ -45,24 +96,21 @@ export function formatCurrencyCompact(amount: number | string): string {
  * Primary function for currency formatting in the application
  */
 export function formatCurrency(amount: number | string, useCache = true): string {
-    // Handle null, undefined, empty string
-    if (amount === null || amount === undefined || amount === '') return '₹0.00'
+    // Use safe parsing for better error handling
+    const num = safeParseCurrency(amount)
 
-    // Convert to number and ensure it's valid
-    const num = parseFloat(amount.toString())
-    if (!isFinite(num) || isNaN(num)) return '₹0.00'
-
-    // Handle very large numbers to prevent overflow
-    if (Math.abs(num) > Number.MAX_SAFE_INTEGER) {
-        log.warn('Currency amount exceeds safe integer range', { amount: num }, 'CurrencyUtils')
+    if (num === 0 && !isValidCurrencyAmount(amount)) {
         return '₹0.00'
     }
 
     // Check cache first for performance
     const cacheKey = `${num}_currency`
     if (useCache && formatCache.has(cacheKey)) {
+        cacheHits++
         return formatCache.get(cacheKey)!
     }
+
+    cacheMisses++
 
     // Format with 2 decimal places
     const formatted = num.toFixed(2)
@@ -197,9 +245,12 @@ export function clearFormatCache(): void {
 /**
  * Get cache statistics for monitoring
  */
-export function getCacheStats(): { size: number; limit: number; hitRate?: number } {
+export function getCacheStats(): { size: number; limit: number; hitRate: string; hits: number; misses: number } {
     return {
         size: formatCache.size,
-        limit: CACHE_SIZE_LIMIT
+        limit: CACHE_SIZE_LIMIT,
+        hitRate: calculateCacheHitRate(),
+        hits: cacheHits,
+        misses: cacheMisses
     }
 }
