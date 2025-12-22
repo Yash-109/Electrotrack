@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { z } from 'zod'
+import { log } from '@/lib/logger'
 
 const addressSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error: unknown) {
-    console.error('Get profile error:', error)
+    log.error('Get profile error', error, 'user-profile-api')
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (error: unknown) {
-    console.error('Profile update error:', error)
+    log.error('Profile update error', error, 'user-profile-api')
 
     if (error instanceof z.ZodError) {
       return NextResponse.json({
