@@ -17,10 +17,26 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LineChart, PieChart, BarChart3 } from "lucide-react"
 
+interface ChartDataItem {
+    month: string
+    revenue: number
+}
+
+interface PieDataItem {
+    name: string
+    value: number
+}
+
+interface MonthlyDataItem {
+    month: string
+    revenue: number
+    expenses: number
+}
+
 interface ChartComponentsProps {
-    chartData: any[]
-    pieData: any[]
-    monthlyData: any[]
+    chartData: ChartDataItem[]
+    pieData: PieDataItem[]
+    monthlyData: MonthlyDataItem[]
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
@@ -46,7 +62,7 @@ export function ChartComponents({ chartData, pieData, monthlyData }: ChartCompon
                                     <XAxis dataKey="month" />
                                     <YAxis />
                                     <Tooltip
-                                        formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']}
+                                        formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']}
                                     />
                                     <Line
                                         type="monotone"
@@ -80,7 +96,7 @@ export function ChartComponents({ chartData, pieData, monthlyData }: ChartCompon
                                     cx="50%"
                                     cy="50%"
                                     labelLine={false}
-                                    label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                                    label={({ name, percent }: { name: string; percent: number }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                                     outerRadius={80}
                                     fill="#8884d8"
                                     dataKey="value"
@@ -89,7 +105,7 @@ export function ChartComponents({ chartData, pieData, monthlyData }: ChartCompon
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip formatter={(value: any) => [`₹${value.toLocaleString()}`, 'Revenue']} />
+                                <Tooltip formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Revenue']} />
                             </RechartsPieChart>
                         </ResponsiveContainer>
                     </div>
@@ -114,7 +130,7 @@ export function ChartComponents({ chartData, pieData, monthlyData }: ChartCompon
                                     <XAxis dataKey="month" />
                                     <YAxis />
                                     <Tooltip
-                                        formatter={(value: any, name: string) => [
+                                        formatter={(value: number, name: string) => [
                                             `₹${value.toLocaleString()}`,
                                             name === 'revenue' ? 'Revenue' : 'Expenses'
                                         ]}
