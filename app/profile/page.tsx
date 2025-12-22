@@ -31,13 +31,21 @@ interface User {
   shippingAddresses?: Address[]
 }
 
+interface OrderItem {
+  productId: string
+  name: string
+  price: number
+  quantity: number
+  image?: string
+}
+
 interface Order {
   _id: string
   orderId: string
   status: string
   total: number
   createdAt: string
-  items: any[]
+  items: OrderItem[]
 }
 
 interface Address {
@@ -177,10 +185,10 @@ export default function ProfilePage() {
       } else {
         throw new Error(data.error)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update profile. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update profile. Please try again.",
         variant: "destructive",
       })
     }
@@ -232,10 +240,10 @@ export default function ProfilePage() {
       } else {
         throw new Error(data.error)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to add address. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to add address. Please try again.",
         variant: "destructive",
       })
     }
@@ -269,10 +277,10 @@ export default function ProfilePage() {
       } else {
         throw new Error(data.error)
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete address. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to delete address. Please try again.",
         variant: "destructive",
       })
     }
