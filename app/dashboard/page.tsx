@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
 import { useRouter } from "next/navigation"
+import { ProductQuickView } from "@/components/product-quick-view"
 
 const products = [
   // FANS (4 products)
@@ -1982,6 +1983,19 @@ export default function DashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Product Quick View Modal */}
+      <ProductQuickView
+        product={quickViewProduct}
+        open={!!quickViewProduct}
+        onClose={() => setQuickViewProduct(null)}
+        onAddToCart={addToCart}
+        onToggleFavorite={toggleFavorite}
+        onToggleCompare={toggleCompare}
+        isFavorite={quickViewProduct ? favorites.has(quickViewProduct.id) : false}
+        isInCompare={quickViewProduct ? compareList.includes(quickViewProduct.id) : false}
+        isAddingToCart={addingToCart === quickViewProduct?.id}
+      />
     </div>
   )
 }
