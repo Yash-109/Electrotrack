@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/use-auth"
 import { CartService, type CartItem } from "@/lib/cart-service"
 import { useRouter } from "next/navigation"
 import { ProductQuickView } from "@/components/product-quick-view"
+import { ScrollToTop } from "@/components/scroll-to-top"
 
 const products = [
   // FANS (4 products)
@@ -1996,6 +1997,9 @@ export default function DashboardPage() {
         isInCompare={quickViewProduct ? compareList.includes(quickViewProduct.id) : false}
         isAddingToCart={addingToCart === quickViewProduct?.id}
       />
+
+      {/* Scroll to Top Button */}
+      <ScrollToTop />
     </div>
   )
 }
