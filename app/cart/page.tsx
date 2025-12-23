@@ -43,6 +43,8 @@ export default function CartPage() {
   const [removingItems, setRemovingItems] = useState<Set<number>>(new Set())
   const [retryAttempts, setRetryAttempts] = useState<Map<number, number>>(new Map())
   const [isRetrying, setIsRetrying] = useState(false)
+  const [savedForLater, setSavedForLater] = useState<CartItem[]>([])
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set())
   const router = useRouter()
   const { toast } = useToast()
 
@@ -274,6 +276,38 @@ export default function CartPage() {
     }
   }
 
+  const clearCart = async () => {
+    if (!session?.user?.email) return
+
+    try {
+      setCartItems([])
+      await CartService.saveCart(session.user.email, [])
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
+      toast({
+        title: "Cart cleared",
+        description: "All items removed from cart.",
+      })
+    } catch (error) {
+      log.error('Failed to clear cart', error, 'CartPage')
+      toast({
+        title: "Failed to clear cart",
+        description: "Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getEstimatedDelivery = () => {
+    const today = new Date()
+    const deliveryDate = new Date(today)
+    deliveryDate.setDate(today.getDate() + 5)
+    return deliveryDate.toLocaleDateString('en-IN', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric'
+    })
+  }
+
   const handleCheckout = () => {
     if (!session?.user?.email) {
       toast({
@@ -351,7 +385,19 @@ export default function CartPage() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Cart Items ({cartItems.length})</CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle>Cart Items ({cartItems.length})</CardTitle>
+                  {cartItems.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearCart}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Clear Cart
+                    </Button>
+                  )}
+                </div>
                 {session?.user && (
                   <p className="text-sm text-gray-600">
                     Logged in as: {session.user.name} ({session.user.email})
@@ -465,6 +511,11 @@ export default function CartPage() {
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
                   <span>₹{cartTotals.total.toFixed(2).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')}</span>
+                </div>
+
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900">📦 Estimated Delivery</p>
+                  <p className="text-sm text-blue-700">{getEstimatedDelivery()}</p>
                 </div>
 
                 <div className="space-y-3 pt-4">
