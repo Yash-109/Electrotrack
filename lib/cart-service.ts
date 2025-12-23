@@ -50,6 +50,34 @@ export class CartService {
     })
   }
 
+  /**
+   * Merge duplicate items in cart by summing quantities
+   */
+  static mergeDuplicateItems(items: CartItem[]): CartItem[] {
+    if (!Array.isArray(items) || items.length === 0) return []
+
+    const itemMap = new Map<string, CartItem>()
+
+    items.forEach(item => {
+      if (itemMap.has(item.id)) {
+        const existing = itemMap.get(item.id)!
+        existing.quantity += item.quantity
+      } else {
+        itemMap.set(item.id, { ...item })
+      }
+    })
+
+    return Array.from(itemMap.values())
+  }
+
+  /**
+   * Get cart item count
+   */
+  static getItemCount(items: CartItem[]): number {
+    if (!Array.isArray(items)) return 0
+    return items.reduce((count, item) => count + (item.quantity || 0), 0)
+  }
+
   static calculateTotal(items: CartItem[]): number {
     if (!Array.isArray(items) || items.length === 0) {
       return 0
@@ -89,7 +117,9 @@ export class CartService {
       return false
     }
 
-    const safeItems = this.sanitizeCartItems(items)
+    // Sanitize and merge duplicate items
+    const sanitizedItems = this.sanitizeCartItems(items)
+    const safeItems = this.mergeDuplicateItems(sanitizedItems)
     const totalAmount = this.calculateTotal(safeItems)
 
     // If offline, persist to fallback immediately without network attempt
