@@ -222,12 +222,90 @@ interface OrderTrackingProps {
         }
     }
 
-    const handleReorder = (order: any) => {
-        // Logic to add items to cart for reordering
-        toast({
-            title: "Items Added",
-            description: "Items from this order have been added to your cart.",
-        })
+    const handleReorder = async (order: any) => {
+        if (!currentUserEmail) {
+            toast({
+                title: "Login required",
+                description: "Please log in to reorder items.",
+                variant: "destructive"
+            })
+            return
+        }
+
+        try {
+            // Fetch current cart
+            const cartResponse = await fetch(`/api/cart/get?userEmail=${encodeURIComponent(currentUserEmail)}`)
+            if (!cartResponse.ok) throw new Error('Failed to fetch cart')
+
+            const cartData = await cartResponse.json()
+            const currentCartItems = cartData.items || []
+
+            // Convert order items to cart format
+            const orderItems = order.items.map((item: any) => ({
+                id: item.id?.toString() || String(Math.random()),
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                image: item.image || '/placeholder.jpg',
+                category: item.category || 'Electronics'
+            }))
+
+            // Merge with existing cart items (combine quantities for duplicate items)
+            const itemMap = new Map()
+
+            // Add existing cart items
+            currentCartItems.forEach((item: any) => {
+                itemMap.set(item.id, item)
+            })
+
+            // Add/merge order items
+            orderItems.forEach((item: any) => {
+                if (itemMap.has(item.id)) {
+                    const existing = itemMap.get(item.id)
+                    itemMap.set(item.id, {
+                        ...existing,
+                        quantity: Math.min(existing.quantity + item.quantity, 99) // Max 99 per item
+                    })
+                } else {
+                    itemMap.set(item.id, item)
+                }
+            })
+
+            const mergedItems = Array.from(itemMap.values())
+
+            // Save updated cart
+            const saveResponse = await fetch('/api/cart/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userEmail: currentUserEmail,
+                    items: mergedItems
+                })
+            })
+
+            if (!saveResponse.ok) throw new Error('Failed to save cart')
+
+            // Dispatch cart update event for header
+            window.dispatchEvent(new CustomEvent('cartUpdated'))
+
+            toast({
+                title: "Items Added to Cart",
+                description: `${orderItems.length} item(s) from order #${order.orderId} have been added to your cart.`,
+            })
+
+            // Optional: Navigate to cart after a brief delay
+            setTimeout(() => {
+                window.location.href = '/cart'
+            }, 1500)
+
+        } catch (error) {
+            console.error('Reorder error:', error)
+            toast({
+                title: "Error",
+                description: "Failed to add items to cart. Please try again.",
+                variant: "destructive",
+            })
+        }
     }
 
     const handleDeleteOrder = async (orderId: string) => {
