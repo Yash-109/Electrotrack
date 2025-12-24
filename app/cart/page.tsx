@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { log } from "@/lib/logger"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -347,15 +348,86 @@ export default function CartPage() {
       <div className="min-h-screen bg-gray-50">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-16">
-            <ShoppingBag className="h-24 w-24 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Your cart is empty</h2>
-            <p className="text-gray-600 mb-8">Add some electronics to get started!</p>
-            <Link href="/dashboard">
-              <Button size="lg">Continue Shopping</Button>
-            </Link>
+          <div className="max-w-3xl mx-auto">
+            <Card className="border-0 shadow-lg">
+              <CardContent className="text-center py-16">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <ShoppingBag className="h-16 w-16 text-blue-600" />
+                </div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-3">Your cart is empty</h2>
+                <p className="text-gray-600 mb-8 text-lg">Discover amazing electronics and start shopping today!</p>
+
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+                  <Link href="/dashboard">
+                    <Button size="lg" className="w-full sm:w-auto">
+                      <ShoppingBag className="mr-2 h-5 w-5" />
+                      Browse Products
+                    </Button>
+                  </Link>
+                  {session?.user && (
+                    <Link href="/order-tracking">
+                      <Button size="lg" variant="outline" className="w-full sm:w-auto">
+                        View My Orders
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+
+                {/* Suggestions */}
+                <div className="mt-12 pt-8 border-t border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Why shop with us?</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-left">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-green-100 rounded-full p-2">
+                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Secure Checkout</p>
+                        <p className="text-sm text-gray-600">100% safe & secure payments</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-blue-100 rounded-full p-2">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Fast Delivery</p>
+                        <p className="text-sm text-gray-600">Quick delivery to your door</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="bg-purple-100 rounded-full p-2">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Best Prices</p>
+                        <p className="text-sm text-gray-600">Competitive pricing guaranteed</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Saved for Later Section */}
+                {savedForLater.length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Saved for Later ({savedForLater.length})</h3>
+                    <p className="text-sm text-gray-600 mb-4">You have items waiting in your saved list</p>
+                    <Button variant="outline" onClick={() => router.push('/dashboard')}>
+                      View Saved Items
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
+        <Footer />
       </div>
     )
   }
