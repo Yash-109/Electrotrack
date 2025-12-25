@@ -23,6 +23,13 @@ export class CartService {
   // In-memory fallback storage for development
   private static fallbackStorage: Map<string, CartItem[]> = new Map()
 
+  // Cache for calculated totals to improve performance
+  private static totalCache: Map<string, { total: number; timestamp: number }> = new Map()
+  private static CACHE_DURATION = 5000 // 5 seconds
+
+  // Cache for item counts
+  private static countCache: Map<string, { count: number; timestamp: number }> = new Map()
+
   /**
    * Validate a single cart item
    * @returns true if item is valid, false otherwise
@@ -71,11 +78,36 @@ export class CartService {
   }
 
   /**
-   * Get cart item count
+   * Get cart item count with caching
    */
   static getItemCount(items: CartItem[]): number {
     if (!Array.isArray(items)) return 0
-    return items.reduce((count, item) => count + (item.quantity || 0), 0)
+
+    // Generate cache key
+    const cacheKey = JSON.stringify(items.map(i => ({ id: i.id, quantity: i.quantity })))
+    const cached = this.countCache.get(cacheKey)
+
+    // Return cached value if still valid
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.count
+    }
+
+    const count = items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+
+    // Cache the result
+    this.countCache.set(cacheKey, { count, timestamp: Date.now() })
+
+    // Clean up old cache entries
+    if (this.countCache.size > 100) {
+      const now = Date.now()
+      for (const [key, value] of this.countCache.entries()) {
+        if (now - value.timestamp > this.CACHE_DURATION) {
+          this.countCache.delete(key)
+        }
+      }
+    }
+
+    return count
   }
 
   static calculateTotal(items: CartItem[]): number {
@@ -83,12 +115,21 @@ export class CartService {
       return 0
     }
 
+    // Generate cache key from items
+    const cacheKey = JSON.stringify(items.map(i => ({ id: i.id, price: i.price, quantity: i.quantity })))
+    const cached = this.totalCache.get(cacheKey)
+
+    // Return cached value if still valid
+    if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
+      return cached.total
+    }
+
     try {
-      return items.reduce((total, item) => {
+      const total = items.reduce((sum, item) => {
         // Validate item data before calculation
         if (!item || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
           log.warn('Invalid cart item data detected', { item }, 'CartService')
-          return total
+          return sum
         }
 
         // Ensure non-negative values and skip zero quantities
@@ -98,12 +139,27 @@ export class CartService {
         // Check for unreasonably large values to prevent overflow
         if (validPrice > 1e10 || validQuantity > 1e6) {
           log.warn('Cart item has suspicious values', { price: validPrice, quantity: validQuantity }, 'CartService')
-          return total
+          return sum
         }
 
-        if (validQuantity === 0 || validPrice === 0) return total
-        return total + (validPrice * validQuantity)
+        if (validQuantity === 0 || validPrice === 0) return sum
+        return sum + (validPrice * validQuantity)
       }, 0)
+
+      // Cache the result
+      this.totalCache.set(cacheKey, { total, timestamp: Date.now() })
+
+      // Clean up old cache entries
+      if (this.totalCache.size > 100) {
+        const now = Date.now()
+        for (const [key, value] of this.totalCache.entries()) {
+          if (now - value.timestamp > this.CACHE_DURATION) {
+            this.totalCache.delete(key)
+          }
+        }
+      }
+
+      return total
     } catch (error) {
       log.error('Error calculating cart total', error, 'CartService')
       return 0
