@@ -11,49 +11,75 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 
 export function withErrorHandling(handler: (req: NextRequest) => Promise<NextResponse>) {
     return async (req: NextRequest) => {
+        const startTime = Date.now()
+        const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`
+
         try {
-            // Add request ID for tracing
-            const requestId = Math.random().toString(36).substring(7)
-            logger.info(`API Request started: ${req.method} ${req.url}`, { requestId })
+            // Log request with context
+            logger.info(`API Request started: ${req.method} ${req.url}`, {
+                requestId,
+                userAgent: req.headers.get('user-agent')?.substring(0, 100),
+                ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+            })
 
             const response = await handler(req)
+            const duration = Date.now() - startTime
+
+            // Add security and tracking headers
+            response.headers.set('X-Request-Id', requestId)
+            response.headers.set('X-Response-Time', `${duration}ms`)
 
             logger.info(`API Request completed: ${req.method} ${req.url}`, {
                 requestId,
-                status: response.status
+                status: response.status,
+                duration: `${duration}ms`
             })
 
             return response
         } catch (error) {
+            const duration = Date.now() - startTime
             logger.error(`API Request failed: ${req.method} ${req.url}`, error)
 
             if (error instanceof AppError) {
-                return NextResponse.json({
+                const response = NextResponse.json({
                     success: false,
                     error: error.message,
                     type: error.type,
+                    requestId,
                     timestamp: error.timestamp.toISOString()
                 }, { status: error.statusCode })
+
+                response.headers.set('X-Request-Id', requestId)
+                response.headers.set('X-Response-Time', `${duration}ms`)
+                return response
             }
 
             if (error instanceof z.ZodError) {
-                return NextResponse.json({
+                const response = NextResponse.json({
                     success: false,
                     error: 'Validation failed',
+                    requestId,
                     details: error.errors.map(e => ({
                         field: e.path.join('.'),
                         message: e.message,
                         code: e.code
                     }))
                 }, { status: 400 })
+
+                response.headers.set('X-Request-Id', requestId)
+                return response
             }
 
             const sanitized = sanitizeError(error)
-            return NextResponse.json({
+            const response = NextResponse.json({
                 success: false,
                 error: sanitized.message,
-                type: sanitized.type
+                type: sanitized.type,
+                requestId
             }, { status: 500 })
+
+            response.headers.set('X-Request-Id', requestId)
+            return response
         }
     }
 }
