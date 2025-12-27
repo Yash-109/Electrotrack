@@ -26,6 +26,9 @@ class Logger {
     private maxHistorySize = 100
     private batchedLogs: LogEntry[] = []
     private batchFlushInterval: NodeJS.Timeout | null = null
+    private rotationThreshold = 1000 // Rotate after 1000 entries
+    private archivedLogs: LogEntry[][] = []
+    private maxArchives = 5
 
     private constructor() {
         // Auto-flush batched logs every 5 seconds in production
@@ -64,11 +67,147 @@ class Logger {
 
         // Store in history for debugging
         this.logHistory.push(entry)
-        if (this.logHistory.length > this.maxHistorySize) {
+
+        // Check if rotation is needed
+        if (this.logHistory.length >= this.rotationThreshold) {
+            this.rotateLogs()
+        } else if (this.logHistory.length > this.maxHistorySize) {
             this.logHistory.shift()
         }
 
         return entry
+    }
+
+    /**
+     * Rotate logs when threshold is reached
+     * Moves current logs to archive and starts fresh
+     */
+    private rotateLogs(): void {
+        if (this.logHistory.length === 0) return
+
+        // Archive current logs
+        this.archivedLogs.push([...this.logHistory])
+
+        // Keep only the most recent archives
+        if (this.archivedLogs.length > this.maxArchives) {
+            this.archivedLogs.shift()
+        }
+
+        // Clear current logs
+        this.logHistory = []
+
+        log.info(`Log rotation completed. Archived ${this.archivedLogs.length} log sets`, undefined, 'Logger')
+    }
+
+    /**
+     * Get compressed log summary for performance analysis
+     */
+    getCompressedLogs(): { current: number; archived: number; totalEntries: number } {
+        const totalEntries = this.logHistory.length +
+            this.archivedLogs.reduce((sum, archive) => sum + archive.length, 0)
+
+        return {
+            current: this.logHistory.length,
+            archived: this.archivedLogs.length,
+            totalEntries
+        }
+    }
+
+    /**
+     * Get archived logs by index
+     */
+    getArchivedLogs(archiveIndex: number): LogEntry[] {
+        return this.archivedLogs[archiveIndex] || []
+    }
+
+    /**
+     * Get all logs (current + archived)
+     */
+    getAllLogs(): LogEntry[] {
+        return [...this.archivedLogs.flat(), ...this.logHistory]
+    }
+
+    /**
+     * Filter logs by level
+     */
+    filterByLevel(level: LogLevel, includeArchived = false): LogEntry[] {
+        const logs = includeArchived ? this.getAllLogs() : this.logHistory
+        return logs.filter(entry => entry.level === level)
+    }
+
+    /**
+     * Filter logs by context
+     */
+    filterByContext(context: string, includeArchived = false): LogEntry[] {
+        const logs = includeArchived ? this.getAllLogs() : this.logHistory
+        return logs.filter(entry => entry.context === context)
+    }
+
+    /**
+     * Search logs by message content
+     */
+    searchLogs(query: string, includeArchived = false): LogEntry[] {
+        const logs = includeArchived ? this.getAllLogs() : this.logHistory
+        const lowerQuery = query.toLowerCase()
+        return logs.filter(entry =>
+            entry.message.toLowerCase().includes(lowerQuery) ||
+            (entry.context && entry.context.toLowerCase().includes(lowerQuery))
+        )
+    }
+
+    /**
+     * Filter logs by time range
+     */
+    filterByTimeRange(startTime: Date, endTime: Date, includeArchived = false): LogEntry[] {
+        const logs = includeArchived ? this.getAllLogs() : this.logHistory
+        const start = startTime.getTime()
+        const end = endTime.getTime()
+
+        return logs.filter(entry => {
+            const entryTime = new Date(entry.timestamp).getTime()
+            return entryTime >= start && entryTime <= end
+        })
+    }
+
+    /**
+     * Get logs with advanced filtering
+     */
+    getFilteredLogs(filters: {
+        level?: LogLevel
+        context?: string
+        searchQuery?: string
+        startTime?: Date
+        endTime?: Date
+        includeArchived?: boolean
+    }): LogEntry[] {
+        let logs = filters.includeArchived ? this.getAllLogs() : this.logHistory
+
+        if (filters.level !== undefined) {
+            logs = logs.filter(entry => entry.level === filters.level)
+        }
+
+        if (filters.context) {
+            logs = logs.filter(entry => entry.context === filters.context)
+        }
+
+        if (filters.searchQuery) {
+            const lowerQuery = filters.searchQuery.toLowerCase()
+            logs = logs.filter(entry =>
+                entry.message.toLowerCase().includes(lowerQuery) ||
+                (entry.context && entry.context.toLowerCase().includes(lowerQuery))
+            )
+        }
+
+        if (filters.startTime && filters.endTime) {
+            const start = filters.startTime.getTime()
+            const end = filters.endTime.getTime()
+            logs = logs.filter(entry => {
+                const entryTime = new Date(entry.timestamp).getTime()
+                return entryTime >= start && entryTime <= end
+            })
+        }
+
+        return logs
     }
 
     /**
@@ -256,4 +395,12 @@ export const log = {
     clearHistory: () => logger.clearLogHistory(),
     exportLogs: () => logger.exportLogs(),
     getStats: () => logger.getLogStats(),
+    getCompressed: () => logger.getCompressedLogs(),
+    getAllLogs: () => logger.getAllLogs(),
+    getArchived: (index: number) => logger.getArchivedLogs(index),
+    filterByLevel: (level: LogLevel, includeArchived?: boolean) => logger.filterByLevel(level, includeArchived),
+    filterByContext: (context: string, includeArchived?: boolean) => logger.filterByContext(context, includeArchived),
+    searchLogs: (query: string, includeArchived?: boolean) => logger.searchLogs(query, includeArchived),
+    filterByTimeRange: (startTime: Date, endTime: Date, includeArchived?: boolean) => logger.filterByTimeRange(startTime, endTime, includeArchived),
+    getFilteredLogs: (filters: Parameters<typeof logger.getFilteredLogs>[0]) => logger.getFilteredLogs(filters),
 }
