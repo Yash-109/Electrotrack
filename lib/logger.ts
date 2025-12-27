@@ -249,6 +249,31 @@ class Logger {
         this.batchedLogs = []
     }
 
+    /**
+     * Get performance insights from logs
+     */
+    getPerformanceInsights(): { slowOperations: LogEntry[]; averageDuration: number; totalOps: number } {
+        const perfLogs = this.logHistory.filter(entry =>
+            entry.context === 'Performance' && entry.data && typeof entry.data === 'object'
+        )
+
+        const slowOps = perfLogs.filter(entry => {
+            const data = entry.data as any
+            return data?.duration && data.duration > 1000
+        })
+
+        const totalDuration = perfLogs.reduce((sum, entry) => {
+            const data = entry.data as any
+            return sum + (data?.duration || 0)
+        }, 0)
+
+        return {
+            slowOperations: slowOps,
+            averageDuration: perfLogs.length > 0 ? totalDuration / perfLogs.length : 0,
+            totalOps: perfLogs.length
+        }
+    }
+
     debug(message: string, data?: unknown, context?: string): void {
         if (!this.shouldLog(LogLevel.DEBUG)) return
 
@@ -403,4 +428,5 @@ export const log = {
     searchLogs: (query: string, includeArchived?: boolean) => logger.searchLogs(query, includeArchived),
     filterByTimeRange: (startTime: Date, endTime: Date, includeArchived?: boolean) => logger.filterByTimeRange(startTime, endTime, includeArchived),
     getFilteredLogs: (filters: Parameters<typeof logger.getFilteredLogs>[0]) => logger.getFilteredLogs(filters),
+    getPerformanceInsights: () => logger.getPerformanceInsights(),
 }
