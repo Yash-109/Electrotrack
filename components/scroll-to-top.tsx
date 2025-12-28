@@ -1,25 +1,33 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowUp } from "lucide-react"
 
 export function ScrollToTop() {
     const [isVisible, setIsVisible] = useState(false)
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
         const toggleVisibility = () => {
-            if (window.pageYOffset > 300) {
-                setIsVisible(true)
-            } else {
-                setIsVisible(false)
-            }
+            // Throttle scroll events to improve performance
+            if (scrollTimeoutRef.current) return
+
+            scrollTimeoutRef.current = setTimeout(() => {
+                const scrollY = window.pageYOffset || document.documentElement.scrollTop
+                setIsVisible(scrollY > 300)
+                scrollTimeoutRef.current = null
+            }, 100) // Check every 100ms instead of on every scroll event
         }
 
-        window.addEventListener("scroll", toggleVisibility)
+        // Use passive listener for better scroll performance
+        window.addEventListener("scroll", toggleVisibility, { passive: true })
 
         return () => {
             window.removeEventListener("scroll", toggleVisibility)
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current)
+            }
         }
     }, [])
 
