@@ -92,22 +92,37 @@ export class CartService {
       return cached.count
     }
 
-    const count = items.reduce((sum, item) => sum + (item.quantity || 0), 0)
+    const count = items.reduce((sum, item) => {
+      // Validate quantity before adding
+      const quantity = typeof item.quantity === 'number' && item.quantity > 0 ? item.quantity : 0
+      return sum + quantity
+    }, 0)
 
     // Cache the result
     this.countCache.set(cacheKey, { count, timestamp: Date.now() })
 
-    // Clean up old cache entries
-    if (this.countCache.size > 100) {
-      const now = Date.now()
-      for (const [key, value] of this.countCache.entries()) {
-        if (now - value.timestamp > this.CACHE_DURATION) {
-          this.countCache.delete(key)
-        }
-      }
-    }
+    // Clean up old cache entries periodically
+    this.cleanupCache(this.countCache)
 
     return count
+  }
+
+  /**
+   * Clean up expired cache entries
+   */
+  private static cleanupCache<T>(cache: Map<string, { timestamp: number } & T>): void {
+    if (cache.size > 100) {
+      const now = Date.now()
+      const keysToDelete: string[] = []
+
+      for (const [key, value] of cache.entries()) {
+        if (now - value.timestamp > this.CACHE_DURATION) {
+          keysToDelete.push(key)
+        }
+      }
+
+      keysToDelete.forEach(key => cache.delete(key))
+    }
   }
 
   static calculateTotal(items: CartItem[]): number {
@@ -149,15 +164,8 @@ export class CartService {
       // Cache the result
       this.totalCache.set(cacheKey, { total, timestamp: Date.now() })
 
-      // Clean up old cache entries
-      if (this.totalCache.size > 100) {
-        const now = Date.now()
-        for (const [key, value] of this.totalCache.entries()) {
-          if (now - value.timestamp > this.CACHE_DURATION) {
-            this.totalCache.delete(key)
-          }
-        }
-      }
+      // Clean up old cache entries periodically
+      this.cleanupCache(this.totalCache)
 
       return total
     } catch (error) {
