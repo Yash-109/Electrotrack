@@ -63,16 +63,23 @@ export function Header() {
     } else {
       setCartItemCount(0)
     }
-  }, [isLoggedIn, currentUser?.email])
+  }, [isLoggedIn, currentUser?.email, fetchCartCount])
 
-  // Listen for cart updates
+  // Listen for cart updates with debouncing to prevent excessive API calls
   useEffect(() => {
+    let debounceTimer: NodeJS.Timeout | null = null
+
     const handleCartUpdate = () => {
       if (currentUser?.email) {
-        // Add a small delay to ensure cart is saved before fetching count
-        setTimeout(() => {
+        // Clear existing timer
+        if (debounceTimer) {
+          clearTimeout(debounceTimer)
+        }
+
+        // Debounce cart count fetch to prevent excessive API calls
+        debounceTimer = setTimeout(() => {
           fetchCartCount(currentUser.email)
-        }, 100)
+        }, 300) // Wait 300ms before fetching to batch rapid updates
       }
     }
 
@@ -80,6 +87,9 @@ export function Header() {
 
     return () => {
       window.removeEventListener("cartUpdated", handleCartUpdate)
+      if (debounceTimer) {
+        clearTimeout(debounceTimer)
+      }
     }
   }, [currentUser?.email, fetchCartCount])
 
