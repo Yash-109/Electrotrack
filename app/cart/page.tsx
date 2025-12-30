@@ -277,6 +277,132 @@ export default function CartPage() {
     }
   }
 
+  const saveForLater = async (id: number) => {
+    if (!session?.user?.email) {
+      toast({
+        title: "Login required",
+        description: "Please login to save items.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const itemToSave = cartItems.find((item) => item.id === id)
+    if (!itemToSave) return
+
+    setRemovingItems(prev => new Set(prev).add(id))
+
+    try {
+      // Move item from cart to saved for later
+      const updatedCartItems = cartItems.filter((item) => item.id !== id)
+      setSavedForLater(prev => [...prev, itemToSave])
+      setCartItems(updatedCartItems)
+
+      // Update cart in database
+      const serviceItems: ServiceCartItem[] = updatedCartItems.map(item => ({
+        id: item.productId || item.id.toString(),
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+        category: item.category
+      }))
+
+      await CartService.saveCart(session.user.email, serviceItems)
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
+
+      toast({
+        title: "Saved for later",
+        description: `${itemToSave.name} has been saved for later.`,
+      })
+    } catch (error) {
+      log.error('Failed to save item for later', error, 'CartPage')
+      // Revert changes on error
+      setCartItems(cartItems)
+      setSavedForLater(prev => prev.filter(item => item.id !== id))
+      toast({
+        title: "Failed to save",
+        description: "Could not save item for later. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setRemovingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
+    }
+  }
+
+  const moveToCart = async (id: number) => {
+    if (!session?.user?.email) {
+      toast({
+        title: "Login required",
+        description: "Please login to update cart.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const itemToMove = savedForLater.find((item) => item.id === id)
+    if (!itemToMove) return
+
+    setUpdatingItems(prev => new Set(prev).add(id))
+
+    try {
+      // Move item from saved for later back to cart
+      const updatedSaved = savedForLater.filter((item) => item.id !== id)
+      const updatedCart = [...cartItems, itemToMove]
+
+      setSavedForLater(updatedSaved)
+      setCartItems(updatedCart)
+
+      // Update cart in database
+      const serviceItems: ServiceCartItem[] = updatedCart.map(item => ({
+        id: item.productId || item.id.toString(),
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image,
+        category: item.category
+      }))
+
+      await CartService.saveCart(session.user.email, serviceItems)
+      window.dispatchEvent(new CustomEvent('cartUpdated'))
+
+      toast({
+        title: "Moved to cart",
+        description: `${itemToMove.name} has been moved to your cart.`,
+      })
+    } catch (error) {
+      log.error('Failed to move item to cart', error, 'CartPage')
+      // Revert changes on error
+      setSavedForLater(savedForLater)
+      setCartItems(cartItems)
+      toast({
+        title: "Failed to move",
+        description: "Could not move item to cart. Please try again.",
+        variant: "destructive"
+      })
+    } finally {
+      setUpdatingItems(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(id)
+        return newSet
+      })
+    }
+  }
+
+  const removeSavedItem = (id: number) => {
+    const itemToRemove = savedForLater.find((item) => item.id === id)
+    setSavedForLater(prev => prev.filter((item) => item.id !== id))
+
+    toast({
+      title: "Item removed",
+      description: `${itemToRemove?.name} has been removed from saved items.`,
+    })
+  }
+
   const clearCart = async () => {
     if (!session?.user?.email) return
 
@@ -534,24 +660,90 @@ export default function CartPage() {
 
                     <div className="text-right">
                       <p className="font-bold text-lg">₹{(item.price * item.quantity).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(item.id)}
-                        className="text-red-600 hover:text-red-700"
-                        disabled={removingItems.has(item.id) || updatingItems.has(item.id)}
-                      >
-                        {removingItems.has(item.id) ? (
-                          <LoadingSpinner size="sm" variant="inline" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                      <div className="flex gap-2 mt-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => saveForLater(item.id)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          disabled={removingItems.has(item.id) || updatingItems.has(item.id)}
+                          title="Save for later"
+                        >
+                          {removingItems.has(item.id) ? (
+                            <LoadingSpinner size="sm" variant="inline" />
+                          ) : (
+                            <span className="text-xs">Save for Later</span>
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeItem(item.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={removingItems.has(item.id) || updatingItems.has(item.id)}
+                          title="Remove from cart"
+                        >
+                          {removingItems.has(item.id) ? (
+                            <LoadingSpinner size="sm" variant="inline" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </CardContent>
             </Card>
+
+            {/* Saved for Later Section */}
+            {savedForLater.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Saved for Later ({savedForLater.length})</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {savedForLater.map((item) => (
+                    <div key={item.id} className="flex items-center space-x-4 p-4 border rounded-lg bg-gray-50">
+                      <img
+                        src={item.image || "/placeholder.svg"}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded-md"
+                      />
+
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{item.name}</h3>
+                        <p className="text-sm text-gray-600 capitalize">{item.category}</p>
+                        <p className="text-blue-600 font-bold">₹{item.price.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => moveToCart(item.id)}
+                          disabled={updatingItems.has(item.id)}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {updatingItems.has(item.id) ? (
+                            <LoadingSpinner size="sm" variant="inline" />
+                          ) : (
+                            "Move to Cart"
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeSavedItem(item.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Order Summary */}
