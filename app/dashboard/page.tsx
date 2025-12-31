@@ -348,6 +348,7 @@ const products = [
 export default function DashboardPage() {
   // State management for search, filtering, and cart operations
   const [searchTerm, setSearchTerm] = useState("")
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [sortBy, setSortBy] = useState("name")
   const [priceRange, setPriceRange] = useState({ min: 0, max: 150000 })
@@ -427,7 +428,7 @@ export default function DashboardPage() {
   // Memoize filtered and sorted products for better performance
   const filteredProducts = useMemo(() => {
     // Early return if no filters applied and no search term
-    if (selectedCategory === "all" && !searchTerm && priceRange.min === 0 && priceRange.max === 150000) {
+    if (selectedCategory === "all" && !debouncedSearchTerm && priceRange.min === 0 && priceRange.max === 150000) {
       return products.sort((a, b) => {
         switch (sortBy) {
           case "price-low":
@@ -443,8 +444,8 @@ export default function DashboardPage() {
     }
 
     // Pre-compute search term once for efficiency
-    const searchLower = searchTerm.toLowerCase()
-    const hasSearchTerm = searchTerm.length > 0
+    const searchLower = debouncedSearchTerm.toLowerCase()
+    const hasSearchTerm = debouncedSearchTerm.length > 0
 
     return products
       .filter((product) => {
@@ -483,7 +484,7 @@ export default function DashboardPage() {
             return a.name.localeCompare(b.name)
         }
       })
-  }, [selectedCategory, searchTerm, sortBy, priceRange])
+  }, [selectedCategory, debouncedSearchTerm, sortBy, priceRange])
 
   // Memoize addToCart function to prevent unnecessary re-renders
   const addToCart = useCallback(async (product: (typeof products)[0]) => {
@@ -852,6 +853,7 @@ export default function DashboardPage() {
   // Debounced search effect with proper cleanup
   useEffect(() => {
     const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm)
       if (searchTerm && searchTerm.length >= 2) {
         log.debug('Search term updated', { searchTerm, length: searchTerm.length }, 'Dashboard')
       }
