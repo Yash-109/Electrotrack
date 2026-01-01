@@ -108,6 +108,7 @@ export class InputValidator {
             return { isValid: false, error: 'Phone number must be 10 digits', sanitized }
         }
 
+        // Indian mobile numbers start with 6, 7, 8, or 9
         if (!['6', '7', '8', '9'].includes(sanitized[0])) {
             return { isValid: false, error: 'Please enter a valid Indian phone number', sanitized }
         }
