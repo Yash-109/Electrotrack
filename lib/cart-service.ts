@@ -140,7 +140,9 @@ export class CartService {
     }
 
     try {
-      const total = items.reduce((sum, item) => {
+      // Use integer arithmetic to avoid floating-point precision errors
+      // Store amounts in paise (smallest currency unit) then convert back
+      const totalInPaise = items.reduce((sum, item) => {
         // Validate item data before calculation
         if (!item || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
           log.warn('Invalid cart item data detected', { item }, 'CartService')
@@ -158,8 +160,14 @@ export class CartService {
         }
 
         if (validQuantity === 0 || validPrice === 0) return sum
-        return sum + (validPrice * validQuantity)
+
+        // Convert to paise (multiply by 100) and use integer arithmetic
+        const priceInPaise = Math.round(validPrice * 100)
+        return sum + (priceInPaise * validQuantity)
       }, 0)
+
+      // Convert back to rupees and round to 2 decimal places
+      const total = Math.round(totalInPaise) / 100
 
       // Cache the result
       this.totalCache.set(cacheKey, { total, timestamp: Date.now() })
