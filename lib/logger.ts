@@ -47,9 +47,8 @@ class Logger {
     private formatLog(entry: LogEntry): string {
         const level = LogLevel[entry.level]
         const context = entry.context ? `[${entry.context}]` : ''
-        // Add a short human-friendly timestamp (with timezone short name) followed by the ISO timestamp for clarity
-        const human = new Date(entry.timestamp).toLocaleString(undefined, { timeZoneName: 'short' })
-        return `${human} (${entry.timestamp}) ${level} ${context} ${entry.message}`
+        // Use timestamp directly for better performance - ISO format is already readable
+        return `[${entry.timestamp}] ${level}${context} ${entry.message}`
     }
 
     private shouldLog(level: LogLevel): boolean {
