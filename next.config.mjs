@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Config files moved to ./config directory
   // Only ignore lint/typescript errors in development
   eslint: {
     ignoreDuringBuilds: process.env.NODE_ENV === 'development',
