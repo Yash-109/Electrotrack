@@ -263,19 +263,6 @@ npm run lint         # Run ESLint
 - 🔐 **Security Guide**: [docs/guides/SECURITY-FIXES-GUIDE.md](docs/guides/SECURITY-FIXES-GUIDE.md)
 - 💳 **Payment Setup**: [docs/setup/RAZORPAY-SETUP.md](docs/setup/RAZORPAY-SETUP.md)
 
-- **Clean Architecture**: Separation of concerns with organized directories
-- **TypeScript**: Full type safety across the application
-- **Modular Design**: Reusable components and utilities
-- **Documentation First**: Comprehensive docs in `/docs` directory
-- **Configuration Management**: Centralized configs in `/config`
-
-### Quick Links
-
-- 📖 **Full Structure Guide**: [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)
-- 🚀 **Setup Guide**: [docs/setup/SETUP-GUIDE.md](docs/setup/SETUP-GUIDE.md)
-- 🔐 **Security Guide**: [docs/guides/SECURITY-FIXES-GUIDE.md](docs/guides/SECURITY-FIXES-GUIDE.md)
-- 💳 **Payment Setup**: [docs/setup/RAZORPAY-SETUP.md](docs/setup/RAZORPAY-SETUP.md)
-
 ## 📞 Support & Contact
 
 ## 🧰 Recent maintenance
