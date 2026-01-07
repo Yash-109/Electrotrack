@@ -295,6 +295,8 @@ For technical issues or feature requests:
 
 This project is developed for Radhika Electronics. All rights reserved.
 
+© 2026 Electrotrack. All rights reserved.
+
 ---
 
 **Built with ❤️ by the Electrotrack Team**

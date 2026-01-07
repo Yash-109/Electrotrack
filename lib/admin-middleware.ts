@@ -59,7 +59,6 @@ export function withAdminAuth(handler: (req: AdminAuthRequest) => Promise<NextRe
             return await handler(adminRequest)
 
         } catch (error) {
-            console.error('Admin auth middleware error:', error)
             return NextResponse.json(
                 { error: 'Authentication error' },
                 { status: 500 }

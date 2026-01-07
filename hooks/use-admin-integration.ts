@@ -14,10 +14,8 @@ export function useAdminIntegration() {
   }) => {
     try {
       const transaction = transactionStore.addOnlineSale(orderData)
-      console.log("Online sale added to admin system:", transaction)
       return transaction
     } catch (error) {
-      console.error("Failed to add online sale to admin system:", error)
       return null
     }
   }
@@ -34,10 +32,8 @@ export function useAdminIntegration() {
         type: "expense",
         ...expenseData,
       })
-      console.log("Expense added to admin system:", transaction)
       return transaction
     } catch (error) {
-      console.error("Failed to add expense to admin system:", error)
       return null
     }
   }
