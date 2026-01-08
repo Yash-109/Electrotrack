@@ -30,6 +30,53 @@ export class CartService {
   // Cache for item counts
   private static countCache: Map<string, { count: number; timestamp: number }> = new Map()
 
+  // Periodic cache cleanup interval
+  private static cacheCleanupInterval: NodeJS.Timeout | null = null
+  private static CLEANUP_INTERVAL = 60000 // Clean up every 60 seconds
+
+  // Initialize periodic cache cleanup
+  static {
+    if (typeof setInterval !== 'undefined') {
+      this.cacheCleanupInterval = setInterval(() => {
+        this.performPeriodicCleanup()
+      }, this.CLEANUP_INTERVAL)
+    }
+  }
+
+  /**
+   * Perform periodic cleanup of all caches
+   */
+  private static performPeriodicCleanup(): void {
+    const now = Date.now()
+    let totalCleaned = 0
+
+    // Clean up total cache
+    totalCleaned += this.cleanupExpiredEntries(this.totalCache, now)
+
+    // Clean up count cache
+    totalCleaned += this.cleanupExpiredEntries(this.countCache, now)
+
+    if (totalCleaned > 0) {
+      log.debug(`Periodic cache cleanup removed ${totalCleaned} expired entries`, undefined, 'CartService')
+    }
+  }
+
+  /**
+   * Remove expired entries from a cache
+   */
+  private static cleanupExpiredEntries<T>(cache: Map<string, { timestamp: number } & T>, now: number): number {
+    const keysToDelete: string[] = []
+
+    for (const [key, value] of cache.entries()) {
+      if (now - value.timestamp > this.CACHE_DURATION) {
+        keysToDelete.push(key)
+      }
+    }
+
+    keysToDelete.forEach(key => cache.delete(key))
+    return keysToDelete.length
+  }
+
   /**
    * Validate a single cart item
    * @returns true if item is valid, false otherwise
@@ -108,20 +155,16 @@ export class CartService {
   }
 
   /**
-   * Clean up expired cache entries
+   * Clean up expired cache entries when size threshold is reached
    */
   private static cleanupCache<T>(cache: Map<string, { timestamp: number } & T>): void {
     if (cache.size > 100) {
       const now = Date.now()
-      const keysToDelete: string[] = []
+      const cleaned = this.cleanupExpiredEntries(cache, now)
 
-      for (const [key, value] of cache.entries()) {
-        if (now - value.timestamp > this.CACHE_DURATION) {
-          keysToDelete.push(key)
-        }
+      if (cleaned > 0) {
+        log.debug(`Cache cleanup removed ${cleaned} entries, size now: ${cache.size}`, undefined, 'CartService')
       }
-
-      keysToDelete.forEach(key => cache.delete(key))
     }
   }
 
