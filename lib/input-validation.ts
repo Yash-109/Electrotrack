@@ -20,6 +20,27 @@ export interface ValidationOptions {
     errorMessage?: string
 }
 
+export interface PasswordStrength {
+    score: number // 0-4 (weak to very strong)
+    feedback: string[]
+    isValid: boolean
+}
+
+/**
+ * Common regex patterns for validation
+ */
+export const ValidationPatterns = {
+    EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+    PHONE_INDIAN: /^[6-9]\d{9}$/,
+    PINCODE_INDIAN: /^[1-9]\d{5}$/,
+    URL: /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/,
+    ALPHANUMERIC: /^[a-zA-Z0-9]+$/,
+    LETTERS_ONLY: /^[a-zA-Z\s-]+$/,
+    NUMBERS_ONLY: /^\d+$/,
+    // Strong password: min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
+    PASSWORD_STRONG: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+} as const
+
 /**
  * Enhanced sanitization with XSS and injection protection
  */
@@ -64,6 +85,23 @@ export class InputValidator {
         return input.replace(/\s/g, '').toLowerCase().trim()
     }
 
+    // Sanitize URL (trim and normalize)
+    static sanitizeURL(input: string): string {
+        if (!input) return ''
+        let url = input.trim()
+        // Add https:// if no protocol specified
+        if (url && !url.match(/^https?:\/\//i)) {
+            url = 'https://' + url
+        }
+        return url
+    }
+
+    // Sanitize password (trim only, no modification)
+    static sanitizePassword(input: string): string {
+        if (!input) return ''
+        return input.trim()
+    }
+
     // Sanitize address (remove script tags and dangerous content)
     static sanitizeAddress(input: string): string {
         if (!input) return ''
@@ -87,9 +125,7 @@ export class InputValidator {
             return { isValid: false, error: 'Email is required', sanitized }
         }
 
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
-
-        if (!emailRegex.test(sanitized)) {
+        if (!ValidationPatterns.EMAIL.test(sanitized)) {
             return { isValid: false, error: 'Please enter a valid email address', sanitized }
         }
 
@@ -196,6 +232,175 @@ export class InputValidator {
         return { isValid: true, sanitized }
     }
 
+    // Validate password with strength analysis
+    static validatePassword(password: string, options?: {
+        minLength?: number
+        requireUppercase?: boolean
+        requireLowercase?: boolean
+        requireNumbers?: boolean
+        requireSpecialChars?: boolean
+    }): ValidationResult & { strength?: PasswordStrength } {
+        const sanitized = this.sanitizePassword(password)
+        const opts = {
+            minLength: options?.minLength ?? 8,
+            requireUppercase: options?.requireUppercase ?? true,
+            requireLowercase: options?.requireLowercase ?? true,
+            requireNumbers: options?.requireNumbers ?? true,
+            requireSpecialChars: options?.requireSpecialChars ?? true,
+        }
+
+        if (!sanitized) {
+            return { isValid: false, error: 'Password is required', sanitized }
+        }
+
+        const feedback: string[] = []
+        let score = 0
+
+        // Length check
+        if (sanitized.length < opts.minLength) {
+            return {
+                isValid: false,
+                error: `Password must be at least ${opts.minLength} characters`,
+                sanitized
+            }
+        }
+
+        if (sanitized.length >= opts.minLength) score++
+        if (sanitized.length >= 12) score++
+
+        // Character requirements
+        const hasUppercase = /[A-Z]/.test(sanitized)
+        const hasLowercase = /[a-z]/.test(sanitized)
+        const hasNumbers = /\d/.test(sanitized)
+        const hasSpecialChars = /[@$!%*?&#^()_\-+=]/.test(sanitized)
+
+        if (opts.requireUppercase && !hasUppercase) {
+            feedback.push('Add at least one uppercase letter')
+        }
+        if (opts.requireLowercase && !hasLowercase) {
+            feedback.push('Add at least one lowercase letter')
+        }
+        if (opts.requireNumbers && !hasNumbers) {
+            feedback.push('Add at least one number')
+        }
+        if (opts.requireSpecialChars && !hasSpecialChars) {
+            feedback.push('Add at least one special character (@$!%*?&#)')
+        }
+
+        if (feedback.length > 0) {
+            return {
+                isValid: false,
+                error: feedback[0],
+                sanitized,
+                strength: {
+                    score,
+                    feedback,
+                    isValid: false
+                }
+            }
+        }
+
+        // Calculate strength
+        if (hasUppercase && hasLowercase) score++
+        if (hasNumbers) score++
+        if (hasSpecialChars) score++
+
+        const strength: PasswordStrength = {
+            score: Math.min(score, 4),
+            feedback: score < 3 ? ['Consider making your password stronger'] : ['Strong password!'],
+            isValid: true
+        }
+
+        return { isValid: true, sanitized, strength }
+    }
+
+    // Validate URL format
+    static validateURL(url: string): ValidationResult {
+        const sanitized = this.sanitizeURL(url)
+
+        if (!sanitized) {
+            return { isValid: false, error: 'URL is required', sanitized }
+        }
+
+        if (!ValidationPatterns.URL.test(sanitized)) {
+            return { isValid: false, error: 'Please enter a valid URL', sanitized }
+        }
+
+        // Additional check for valid protocol
+        try {
+            new URL(sanitized)
+            return { isValid: true, sanitized }
+        } catch {
+            return { isValid: false, error: 'Invalid URL format', sanitized }
+        }
+    }
+
+    // Validate credit card number using Luhn algorithm
+    static validateCreditCard(cardNumber: string): ValidationResult {
+        const sanitized = cardNumber.replace(/\s|-/g, '').trim()
+
+        if (!sanitized) {
+            return { isValid: false, error: 'Card number is required', sanitized }
+        }
+
+        if (!/^\d+$/.test(sanitized)) {
+            return { isValid: false, error: 'Card number must contain only digits', sanitized }
+        }
+
+        if (sanitized.length < 13 || sanitized.length > 19) {
+            return { isValid: false, error: 'Invalid card number length', sanitized }
+        }
+
+        // Luhn algorithm
+        let sum = 0
+        let isEven = false
+
+        for (let i = sanitized.length - 1; i >= 0; i--) {
+            let digit = parseInt(sanitized[i], 10)
+
+            if (isEven) {
+                digit *= 2
+                if (digit > 9) {
+                    digit -= 9
+                }
+            }
+
+            sum += digit
+            isEven = !isEven
+        }
+
+        const isValid = sum % 10 === 0
+
+        return {
+            isValid,
+            error: isValid ? undefined : 'Invalid card number',
+            sanitized
+        }
+    }
+
+    // Validate username (alphanumeric with underscores)
+    static validateUsername(username: string, minLength: number = 3): ValidationResult {
+        const sanitized = username.trim()
+
+        if (!sanitized) {
+            return { isValid: false, error: 'Username is required', sanitized }
+        }
+
+        if (sanitized.length < minLength) {
+            return { isValid: false, error: `Username must be at least ${minLength} characters`, sanitized }
+        }
+
+        if (sanitized.length > 30) {
+            return { isValid: false, error: 'Username is too long (max 30 characters)', sanitized }
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(sanitized)) {
+            return { isValid: false, error: 'Username can only contain letters, numbers, and underscores', sanitized }
+        }
+
+        return { isValid: true, sanitized }
+    }
+
     // Generic validator with custom options
     static validate(input: string, options: ValidationOptions): ValidationResult {
         let sanitized = input?.trim() || ''
@@ -292,12 +497,18 @@ export const {
     sanitizePhone,
     sanitizeEmail,
     sanitizeAddress,
+    sanitizeURL,
+    sanitizePassword,
     validateEmail,
     validatePhone,
     validateName,
     validatePincode,
     validateAddress,
     validateCity,
+    validatePassword,
+    validateURL,
+    validateCreditCard,
+    validateUsername,
     validate,
     validateMultiple,
     logValidationFailure
